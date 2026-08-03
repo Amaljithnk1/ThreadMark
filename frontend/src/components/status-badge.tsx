@@ -1,0 +1,2 @@
+const tones: Record<string,string> = { pending:"border-warning/50 bg-warning/10 text-warning", accepted:"border-indigo-dye/40 bg-indigo-dye/10 text-indigo-dye", preparing:"border-ochre/50 bg-ochre/10 text-ochre", ready_for_dispatch:"border-success/50 bg-success/10 text-success", completed:"border-loom bg-loom/20 text-walnut" };
+export function StatusBadge({ status }: { status: string }) { return <span className={`inline-flex rounded-sm border px-2 py-1 font-data text-[10px] uppercase tracking-wide ${tones[status] ?? tones.pending}`}>{status.replaceAll("_", " ")}</span>; }

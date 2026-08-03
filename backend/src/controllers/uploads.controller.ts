@@ -1,0 +1,4 @@
+import type {NextFunction,Request,Response} from "express";import {HttpError} from "../utils/http-error.js";
+type CloudFile={path?:string;filename?:string;mimetype?:string;originalname?:string};
+export function uploadProductImages(req:Request,res:Response,next:NextFunction){try{const files=(req.files??[]) as CloudFile[];if(!files.length)throw new HttpError(400,"Choose at least one product image to upload");res.status(201).json({data:files.map(file=>({url:file.path,publicId:file.filename,originalName:file.originalname}))});}catch(error){next(error)}}
+export function uploadVerificationDocument(req:Request,res:Response,next:NextFunction){try{const file=req.file as CloudFile|undefined;if(!file?.path)throw new HttpError(400,"Choose a verification document to upload");res.status(201).json({data:{url:file.path,publicId:file.filename,originalName:file.originalname,type:file.mimetype}});}catch(error){next(error)}}

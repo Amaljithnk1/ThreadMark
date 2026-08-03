@@ -1,0 +1,7 @@
+import type { ProductPreview } from "./product-card";
+export const demoProducts: ProductPreview[] = [
+ {id:"organic-cotton-twill",name:"Organic Cotton Twill",category:"Apparel",composition:"100% organic cotton",gsm:280,price:245,stockType:"ready_stock",certifications:["GOTS","OEKO-TEX"],supplier:"Malabar Weaves",verified:true,sustainabilityTags:["organic"],image:"https://images.unsplash.com/photo-1603252110481-7ba873bf42ab?auto=format&fit=crop&w=900&q=80"},
+ {id:"recycled-polyester-canvas",name:"Recycled Polyester Canvas",category:"Outdoor",composition:"100% recycled polyester",gsm:340,price:310,stockType:"made_to_order",certifications:["GRS"],supplier:"Coastal Technical Textiles",verified:true,sustainabilityTags:["recycled"],image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80"},
+ {id:"linen-cotton-herringbone",name:"Linen Cotton Herringbone",category:"Home textiles",composition:"55% linen / 45% cotton",gsm:220,price:385,stockType:"ready_stock",certifications:["OEKO-TEX"],supplier:"Erode Loom House",image:"https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=900&q=80"},
+ {id:"deadstock-viscose-satin",name:"Deadstock Viscose Satin",category:"Fashion",composition:"100% viscose",gsm:150,price:190,stockType:"ready_stock",certifications:[],supplier:"Surplus Yard",sustainabilityTags:["deadstock"],image:"https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=80"}
+];

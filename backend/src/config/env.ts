@@ -1,0 +1,4 @@
+import "dotenv/config";
+import { z } from "zod";
+const envSchema = z.object({ NODE_ENV: z.enum(["development", "test", "production"]).default("development"), PORT: z.coerce.number().int().positive().default(4000), DATABASE_URL: z.string().url().default("postgresql://postgres:postgres@localhost:5432/threadmark"), JWT_SECRET: z.string().min(32).default("development-only-change-this-secret-key-32"), CORS_ORIGIN: z.string().url().default("http://localhost:3000"), HF_API_TOKEN: z.string().optional(), HF_CHAT_MODEL: z.string().default("meta-llama/Llama-3.1-8B-Instruct"), HF_EMBEDDING_MODEL: z.string().default("sentence-transformers/all-MiniLM-L6-v2"), CLOUDINARY_CLOUD_NAME: z.string().optional(), CLOUDINARY_API_KEY: z.string().optional(), CLOUDINARY_API_SECRET: z.string().optional() });
+export const env = envSchema.parse(process.env);

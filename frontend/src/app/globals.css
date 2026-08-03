@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-indigo-dye: #29335C;
+  --color-cotton: #EDE6D8;
+  --color-ochre: #A8452F;
+  --color-walnut: #2B241C;
+  --color-loom: #A79C8A;
+  --color-success: #45654A;
+  --color-warning: #986A25;
+  --color-danger: #8A3830;
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-plex-sans);
+  --font-data: var(--font-plex-mono);
+}
+
+:root { --background: #EDE6D8; --foreground: #2B241C; }
+* { box-sizing: border-box; }
+html { background: var(--background); }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-plex-sans), Arial, sans-serif; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { outline-offset: 3px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #A8452F; }
+.woven-grid { background-image: linear-gradient(rgba(43,36,28,.075) 1px, transparent 1px), linear-gradient(90deg, rgba(43,36,28,.075) 1px, transparent 1px); background-size: 18px 18px; }
+.swatch-tag { position: relative; clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+.swatch-tag::after { content: ""; position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #EDE6D8; box-shadow: 0 0 0 1px rgba(43,36,28,.45); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }

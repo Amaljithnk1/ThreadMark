@@ -1,0 +1,1 @@
+"use client";import {useEffect} from "react";import {api} from "@/lib/api";export function ProductViewTracker({productId}:{productId:string}){useEffect(()=>{const timer=window.setTimeout(()=>void api(`/products/${productId}/view`,{method:"POST"}).catch(()=>undefined),300);return()=>window.clearTimeout(timer)},[productId]);return null}

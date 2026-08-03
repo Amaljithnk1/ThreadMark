@@ -1,0 +1,1 @@
+import {Router} from "express";import {requireRole} from "../middleware/auth.middleware.js";import {supplierDashboard} from "../controllers/supplier-dashboard.controller.js";const router=Router();router.get('/',...requireRole('supplier'),supplierDashboard);export default router;

@@ -1,0 +1,1 @@
+"use client";import {useEffect} from "react";export function ProductAIContext({productId}:{productId:string}){useEffect(()=>{sessionStorage.setItem("threadmark-ai-product-id",productId);return()=>{if(sessionStorage.getItem("threadmark-ai-product-id")===productId)sessionStorage.removeItem("threadmark-ai-product-id")}},[productId]);return null}
