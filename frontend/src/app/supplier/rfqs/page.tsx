@@ -1,4 +1,4 @@
-"use client";
+"use client";import {BackLink} from "@/components/back-link";
 import {useEffect,useState} from "react";
 import {SiteHeader} from "@/components/site-header";
 import {api} from "@/lib/api";
@@ -101,7 +101,7 @@ export default function SupplierRfqs(){
     <RequireRole role="supplier">
       <>
         <SiteHeader/>
-        <main className="mx-auto max-w-6xl px-5 py-10 md:px-8">
+        <main className="mx-auto max-w-6xl px-5 py-10 md:px-8"><BackLink href="/supplier"/>
           <p className="font-data text-xs uppercase tracking-[.14em] text-ochre">Supplier negotiation desk</p>
           <h1 className="mt-2 font-display text-5xl">RFQ inbox</h1>
           <p className="mt-3 max-w-2xl leading-7">Respond with pricing, lead time, and notes through the marketplace. Buyer and supplier personal contact details remain private.</p>

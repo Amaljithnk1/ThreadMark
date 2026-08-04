@@ -1,4 +1,4 @@
-"use client";
+"use client";import {BackLink} from "@/components/back-link";
 import {useEffect,useState} from "react";
 import {SiteHeader} from "@/components/site-header";
 import {api} from "@/lib/api";
@@ -74,7 +74,7 @@ export default function BuyerRfqs(){
     <RequireRole role="buyer">
       <>
         <SiteHeader/>
-        <main className="mx-auto max-w-6xl px-5 py-10 md:px-8">
+        <main className="mx-auto max-w-6xl px-5 py-10 md:px-8"><BackLink href="/buyer"/>
           <p className="font-data text-xs uppercase tracking-[.14em] text-ochre">Buyer negotiation desk</p>
           <h1 className="mt-2 font-display text-5xl">Your quote requests</h1>
           <p className="mt-3 leading-7">Review structured supplier offers and accept one to create a standard marketplace order.</p>
