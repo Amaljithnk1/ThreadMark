@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {SiteHeader} from "@/components/site-header";
 import {api} from "@/lib/api";
 import {RequireRole} from "@/components/require-role";
+import {usePendingAction} from "@/hooks/use-pending-action";
 
 type Quote={id:string;quoted_price:number|string;quoted_lead_time_days:number;notes:string|null;status:string;proposed_by:string;parent_quote_id:string|null;created_at:string};
 type Rfq={id:string;product_name:string|null;custom_spec:Record<string,unknown>|null;quantity:number;target_price:number|string|null;needed_by_date:string|null;status:string;created_at:string;quotes:Quote[]};
@@ -11,20 +12,19 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
   const [price,setPrice]=useState('');
   const [leadTime,setLeadTime]=useState('');
   const [notes,setNotes]=useState('');
-  const [submitting,setSubmitting]=useState(false);
+  const {run: submit, isPending: submitting} = usePendingAction();
   const [error,setError]=useState('');
 
-  async function submit(e:React.FormEvent){
+  async function handleCounter(e:React.FormEvent){
     e.preventDefault();
-    setSubmitting(true);
     setError('');
-    try{
-      await api(`/rfqs/${rfqId}/quotes/${quoteId}/counter`,{method:'POST',body:JSON.stringify({quotedPrice:Number(price),quotedLeadTimeDays:Number(leadTime),notes})});
-      onSuccess();
-    }catch(cause){
+    try {
+      await submit(quoteId, async () => {
+        await api(`/rfqs/${rfqId}/quotes/${quoteId}/counter`,{method:'POST',body:JSON.stringify({quotedPrice:Number(price),quotedLeadTimeDays:Number(leadTime),notes})});
+        onSuccess();
+      });
+    } catch(cause) {
       setError(cause instanceof Error?cause.message:'Counter failed.')
-    }finally{
-      setSubmitting(false)
     }
   }
 
@@ -35,7 +35,7 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
       <label><span className="mb-1 block text-sm font-semibold">Lead time (days)</span><input value={leadTime} onChange={e=>setLeadTime(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
       <label><span className="mb-1 block text-sm font-semibold">Notes</span><input value={notes} onChange={e=>setNotes(e.target.value)} className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
       <div className="sm:col-span-3 flex gap-3">
-        <button disabled={submitting} className="rounded-sm bg-indigo-dye px-4 py-2 font-semibold text-cotton disabled:opacity-60">Send counter</button>
+        <button disabled={submitting(quoteId)} className="rounded-sm bg-indigo-dye px-4 py-2 font-semibold text-cotton disabled:opacity-60">Send counter</button>
       </div>
     </form>
   )
@@ -125,7 +125,7 @@ export default function SupplierRfqs(){
                 {rfq.status==='open' && (!rfq.quotes || rfq.quotes.length === 0) && (
                   <div className="mt-5 flex gap-3">
                     <button onClick={()=>setQuoteFor(rfq.id)} className="rounded-sm bg-indigo-dye px-4 py-2.5 font-semibold text-cotton">Send quote</button>
-                    <button onClick={()=>void reject(rfq.id)} className="rounded-sm border border-danger px-4 py-2.5 font-semibold text-danger">Reject</button>
+                    <button disabled={isPending(rfq.id)} onClick={()=>void run(rfq.id, ()=>reject(rfq.id))} className="rounded-sm border border-danger px-4 py-2.5 font-semibold text-danger disabled:opacity-50">Reject</button>
                   </div>
                 )}
                 {quoteFor===rfq.id && (
@@ -155,8 +155,8 @@ export default function SupplierRfqs(){
                           
                           {isActiveLeaf && !isMine && countering !== quote.id && (
                             <div className="mt-4 flex gap-3">
-                              <button onClick={()=>void decide(quote.id,'accepted')} className="rounded-sm bg-indigo-dye px-3 py-2 font-semibold text-cotton">Accept to order</button>
-                              <button onClick={()=>void decide(quote.id,'rejected')} className="rounded-sm border border-danger px-3 py-2 font-semibold text-danger">Reject</button>
+                              <button disabled={isPending(quote.id)} onClick={()=>void run(quote.id, ()=>decide(quote.id,'accepted'))} className="rounded-sm bg-indigo-dye px-3 py-2 font-semibold text-cotton disabled:opacity-50">Accept to order</button>
+                              <button disabled={isPending(quote.id)} onClick={()=>void run(quote.id, ()=>decide(quote.id,'rejected'))} className="rounded-sm border border-danger px-3 py-2 font-semibold text-danger disabled:opacity-50">Reject</button>
                               <button onClick={()=>setCountering(quote.id)} className="rounded-sm border border-indigo-dye px-3 py-2 font-semibold text-indigo-dye">Counter offer</button>
                             </div>
                           )}
