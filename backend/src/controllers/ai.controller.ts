@@ -3,7 +3,8 @@ import {z} from "zod";
 import {converse,embed,warmModel} from "../services/huggingface.service.js";
 import {query} from "../config/db.js";
 import {HttpError} from "../utils/http-error.js";
-const messageSchema=z.object({messages:z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(3000)})).min(1).max(12),productId:z.string().uuid().optional()});
+const pendingItemSchema=z.object({productId:z.string().uuid(),productName:z.string(),quantity:z.number().nullable()});
+const messageSchema=z.object({messages:z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(3000)})).min(1).max(12),productId:z.string().uuid().optional(),pendingAction:z.array(pendingItemSchema).optional()});
 function sanitizeAssistantOutput(value:string){
   return value
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,"[private supplier contact removed]")
@@ -11,7 +12,58 @@ function sanitizeAssistantOutput(value:string){
 }
 const publicSupplierFields="Public supplier fields are business name, product categories, fabrics offered, MOQ, and verified status. Never disclose supplier contact information, business address, operating hours, email, or phone number.";
 export async function warm(_req:Request,res:Response){res.json(await warmModel());}
-export async function chat(req:Request,res:Response,next:NextFunction){try{const input=messageSchema.parse(req.body);let grounding="";let productRecord:Record<string,unknown>|null=null;if(input.productId){const result=await query(`SELECT p.name,p.category,p.description,p.gsm,p.composition,p.weave_type,p.width,p.shrinkage_rate,p.colorfastness_rating,p.certifications,p.stock_type,p.lead_time_days,p.stock_qty,p.price,sp.business_name,sp.product_categories,sp.fabric_types_offered,sp.moq,sp.verification_status FROM products p JOIN supplier_profiles sp ON sp.user_id=p.supplier_id WHERE p.id=$1 AND p.status='available' AND sp.status='approved'`,[input.productId]);productRecord=(result.rows[0]??null) as Record<string,unknown>|null;grounding=`Product record (answer only from this record): ${JSON.stringify(productRecord??{})}`;}const latest=input.messages[input.messages.length-1]?.content??"";const productQuestion=latest.toLowerCase();let deterministicAnswer:string|null=null;if(productRecord){const facts:[RegExp,string,unknown][]=[[/gsm|weight/,"GSM",productRecord.gsm],[/composition|made of|material/,"Composition",productRecord.composition],[/weave/,"Weave",productRecord.weave_type],[/certification|certified|oeko|gots|iso/,"Certifications",Array.isArray(productRecord.certifications)?productRecord.certifications.join(", "):productRecord.certifications],[/stock type|ready stock|made to order/,"Stock type",productRecord.stock_type],[/lead time|how long|dispatch/,"Lead time",productRecord.lead_time_days?`${productRecord.lead_time_days} days`:"Ready stock"],[/available|stock quantity|how much stock/,"Available stock",productRecord.stock_qty]];const match=facts.find(([pattern])=>pattern.test(productQuestion));if(match)deterministicAnswer=`${match[1]}: ${match[2]??"Not specified"}.`;}const system=`You are ThreadMark's B2B textile marketplace assistant. Be concise and truthful. ${publicSupplierFields} ${grounding} When a buyer asks to add a product to cart, identify product and quantity and state that a visible confirmation is required; do not silently claim a cart was updated. Do not invent unavailable product facts.`;const result:any=deterministicAnswer?null:await converse(system,input.messages);const rawContent=deterministicAnswer??result?.choices?.[0]?.message?.content??result?.generated_text??"I could not prepare an answer. Please try again.";const content=sanitizeAssistantOutput(rawContent);const addMatch=latest.match(/(?:add|put)\s+(\d+)\s*(?:m|metres?|meters?)?\s+(?:of\s+)?(.+?)(?:\s+(?:to|in)\s+(?:my\s+)?cart)?[.!?]?$/i);let action:unknown=null;if(addMatch){const quantity=Number(addMatch[1]);const name=addMatch[2].trim();const product=await query<{id:string;name:string}>(`SELECT p.id,p.name FROM products p JOIN supplier_profiles sp ON sp.user_id=p.supplier_id WHERE p.status='available' AND sp.status='approved' AND p.name ILIKE $1 ORDER BY p.name ASC LIMIT 1`,[`%${name}%`]);if(product.rows[0])action={type:"add_to_cart",productId:product.rows[0].id,productName:product.rows[0].name,quantity};}if(req.auth?.role==="buyer"){await query("INSERT INTO ai_conversations (buyer_id,messages) VALUES ($1,$2)",[req.auth.userId,JSON.stringify([...input.messages,{role:"assistant",content}])]);}res.json({data:{message:content,action}});}catch(error){next(error);}}
+function parseCartItems(text:string):{quantity:number,name:string}[]{
+  const items:{quantity:number,name:string}[]=[];
+  const re=/(\d+)\s*(?:m|metres?|meters?)?\s+(?:of\s+)?([a-z][a-z\s]*?)(?=(?:\d|,|\band\b|$|\s+to\s+cart|\s+in\s+cart))/gi;
+  let m;while((m=re.exec(text))){const name=m[2].trim();if(name)items.push({quantity:Number(m[1]),name});}
+  return items;
+}
+export async function chat(req:Request,res:Response,next:NextFunction){try{const input=messageSchema.parse(req.body);if(input.pendingAction?.length){
+  const latestMsg=input.messages[input.messages.length-1]?.content.trim()??"";
+  if(/^(yes|yeah|yep|confirm|correct)\b/i.test(latestMsg)&&input.pendingAction.every(p=>p.quantity)){
+    res.json({data:{message:"Confirmed.",actions:input.pendingAction.map(p=>({type:"add_to_cart",productId:p.productId,productName:p.productName,quantity:p.quantity as number}))}});
+    return;
+  }
+  if(input.pendingAction.length===1&&!input.pendingAction[0].quantity){
+    const num=Number(latestMsg.replace(/[^\d.]/g,""));
+    if(num>0){
+      res.json({data:{message:`Add ${num}m of ${input.pendingAction[0].productName} to cart — reply "yes" to confirm.`,actions:[],pendingAction:[{...input.pendingAction[0],quantity:num}]}});
+      return;
+    }
+  }
+  res.json({data:{message:`Reply "yes" to confirm adding ${input.pendingAction.map(p=>`${p.quantity??"?"}m of ${p.productName}`).join(", ")} to cart.`,actions:[],pendingAction:input.pendingAction}});
+  return;
+}let grounding="";let productRecord:Record<string,unknown>|null=null;if(input.productId){const result=await query(`SELECT p.name,p.category,p.description,p.gsm,p.composition,p.weave_type,p.width,p.shrinkage_rate,p.colorfastness_rating,p.certifications,p.stock_type,p.lead_time_days,p.stock_qty,p.price,sp.business_name,sp.product_categories,sp.fabric_types_offered,sp.moq,sp.verification_status FROM products p JOIN supplier_profiles sp ON sp.user_id=p.supplier_id WHERE p.id=$1 AND p.status='available' AND sp.status='approved'`,[input.productId]);productRecord=(result.rows[0]??null) as Record<string,unknown>|null;grounding=`Product record (answer only from this record): ${JSON.stringify(productRecord??{})}`;}const latest=input.messages[input.messages.length-1]?.content??"";const productQuestion=latest.toLowerCase();let deterministicAnswer:string|null=null;if(productRecord){const facts:[RegExp,string,unknown][]=[[/gsm|weight/,"GSM",productRecord.gsm],[/composition|made of|material/,"Composition",productRecord.composition],[/weave/,"Weave",productRecord.weave_type],[/certification|certified|oeko|gots|iso/,"Certifications",Array.isArray(productRecord.certifications)?productRecord.certifications.join(", "):productRecord.certifications],[/stock type|ready stock|made to order/,"Stock type",productRecord.stock_type],[/lead time|how long|dispatch/,"Lead time",productRecord.lead_time_days?`${productRecord.lead_time_days} days`:"Ready stock"],[/available|stock quantity|how much stock/,"Available stock",productRecord.stock_qty]];const match=facts.find(([pattern])=>pattern.test(productQuestion));if(match)deterministicAnswer=`${match[1]}: ${match[2]??"Not specified"}.`;}const noGroundingRule=input.productId?"":"You have not been given any product or supplier data for this question. Do not name, describe, or invent any specific supplier, product, price, MOQ, or verification status. Instead say you can search the marketplace for that, and suggest the buyer use the search bar or ask about a specific product page.";const system=`You are ThreadMark's B2B textile marketplace assistant. Be concise and truthful. ${publicSupplierFields} ${grounding} ${noGroundingRule} When a buyer asks to add a product to cart, identify product and quantity and state that a visible confirmation is required; do not silently claim a cart was updated. Do not invent unavailable product facts.`;const result:any=deterministicAnswer?null:await converse(system,input.messages);const rawContent=deterministicAnswer??result?.choices?.[0]?.message?.content??result?.generated_text??"I could not prepare an answer. Please try again.";const content=sanitizeAssistantOutput(rawContent);if(/(?:add|put)\b.*\bcart\b/i.test(latest) || /How many metres/i.test(input.messages[input.messages.length-2]?.content??"")){
+  if(req.auth?.role!=="buyer"){res.json({data:{message:req.auth?"Only buyer accounts can add items to a cart.":"Sign in as a buyer to add items to your cart.",actions:[]}});return;}
+  const parsed=parseCartItems(latest);
+  if(parsed.length){
+    const resolved:{productId:string;productName:string;quantity:number}[]=[];
+    const unresolved:string[]=[];
+    for(const item of parsed){
+      const searchTerm = item.name.replace(/\s+from\s+/i, ' % ');
+      const product=await query<{id:string;name:string}>(`SELECT p.id,p.name FROM products p JOIN supplier_profiles sp ON sp.user_id=p.supplier_id WHERE p.status='available' AND sp.status='approved' AND concat(p.name, ' ', sp.business_name, ' ', p.name) ILIKE $1 ORDER BY p.name ASC LIMIT 1`,[`%${searchTerm}%`]);
+      if(product.rows[0])resolved.push({productId:product.rows[0].id,productName:product.rows[0].name,quantity:item.quantity});
+      else unresolved.push(item.name);
+    }
+    if(!resolved.length){res.json({data:{message:`I couldn't find ${unresolved.join(", ")} in the marketplace.`,actions:[]}});return;}
+    const list=resolved.map(r=>`${r.quantity}m of ${r.productName}`).join(", ");
+    const note=unresolved.length?` (couldn't find: ${unresolved.join(", ")})`:"";
+    res.json({data:{message:`Add ${list} to cart${note} — reply "yes" to confirm.`,actions:[],pendingAction:resolved}});
+    return;
+  }
+  const addNoQtyMatch=/(?:add|put)\s+(?:the\s+)?(.+?)\s+(?:to|in)\s+(?:my\s+)?cart[.!?]?$/i.exec(latest);
+  if(addNoQtyMatch){
+    const searchTerm = addNoQtyMatch[1].trim().replace(/\s+from\s+/i, ' % ');
+    const product=await query<{id:string;name:string}>(`SELECT p.id,p.name FROM products p JOIN supplier_profiles sp ON sp.user_id=p.supplier_id WHERE p.status='available' AND sp.status='approved' AND concat(p.name, ' ', sp.business_name, ' ', p.name) ILIKE $1 ORDER BY p.name ASC LIMIT 1`,[`%${searchTerm}%`]);
+    if(product.rows[0]){
+      res.json({data:{message:`How many metres of ${product.rows[0].name} would you like to add?`,actions:[],pendingAction:[{productId:product.rows[0].id,productName:product.rows[0].name,quantity:null}]}});
+      return;
+    }
+    res.json({data:{message:`I couldn't find ${addNoQtyMatch[1].trim()} in the marketplace.`,actions:[]}});
+    return;
+  }
+}
+let actions:unknown[]=[];if(req.auth?.role==="buyer"){await query("INSERT INTO ai_conversations (buyer_id,messages) VALUES ($1,$2)",[req.auth.userId,JSON.stringify([...input.messages,{role:"assistant",content}])]);}res.json({data:{message:content,actions}});}catch(error){next(error);}}
 
 const naturalSearchSchema=z.object({query:z.string().trim().min(3).max(500)});
 export async function naturalSearch(req:Request,res:Response,next:NextFunction){try{const input=naturalSearchSchema.parse(req.body);const instruction=`Extract textile marketplace filters from this buyer request. Return JSON only with optional keys: search, gsmMin(number), gsmMax(number), composition, weaveType, stockType (ready_stock or made_to_order), certification. Do not invent facts. Request: ${input.query}`;const result:any=await converse("You are a precise JSON extraction service.",[{role:"user",content:instruction}]);const raw=result?.choices?.[0]?.message?.content??"{}";const matched=raw.match(/\{[\s\S]*\}/);let filters:Record<string,unknown>={search:input.query};try{filters=JSON.parse(matched?.[0]??"{}")}catch{}res.json({data:{filters}});}catch(error){next(error)}}

@@ -23,6 +23,8 @@ export function AssistantWidget() {
   const { messages, isThinking, isOpen, setOpen, add, setThinking } = useAIStore();
   const [text, setText] = useState("");
   const [voiceError, setVoiceError] = useState("");
+  const [muted, setMuted] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{productId:string;productName:string;quantity:number|null}[] | null>(null);
   const feed = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export function AssistantWidget() {
       }
 
       // Natural search → redirect to marketplace
-      if (/^(search|find|show me|looking for)\b/i.test(trimmed)) {
+      if (/^(search|find|show me|looking for)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
         const search = await api<{ data: { filters: Record<string, unknown> } }>(
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
@@ -83,34 +85,40 @@ export function AssistantWidget() {
       }
 
       // General chat
-      const result = await api<{ data: { message: string; action?: { type: string; productId: string; productName: string; quantity: number } | null } }>(
+      const result = await api<{ data: { message: string; actions?: { type: string; productId: string; productName: string; quantity: number }[] | null; pendingAction?: {productId:string;productName:string;quantity:number|null}[] | null } }>(
         "/ai/chat",
         {
           method: "POST",
           body: JSON.stringify({
             messages: [...messages, { role: "user", content: trimmed }],
             productId: sessionStorage.getItem("threadmark-ai-product-id") ?? undefined,
+            pendingAction: pendingAction ?? undefined,
           }),
         }
       );
 
       let reply = result.data.message;
+      setPendingAction(result.data.pendingAction ?? null);
 
-      if (result.data.action?.type === "add_to_cart") {
-        try {
-          await api("/cart/items", {
-            method: "POST",
-            body: JSON.stringify({ productId: result.data.action.productId, quantity: result.data.action.quantity }),
-          });
-          reply += `\n\nAdded ${result.data.action.quantity}m of ${result.data.action.productName} to your cart.`;
-        } catch (cause) {
-          reply += `\n\nI found ${result.data.action.productName}, but could not add it: ${cause instanceof Error ? cause.message : "cart update failed"}`;
+      if (result.data.actions?.length) {
+        const outcomes:string[]=[];
+        for(const a of result.data.actions){
+          try{
+            await api("/cart/items",{method:"POST",body:JSON.stringify({productId:a.productId,quantity:a.quantity})});
+            outcomes.push(`Added ${a.quantity}m of ${a.productName}.`);
+          }catch(cause){
+            outcomes.push(`Could not add ${a.productName}: ${cause instanceof Error?cause.message:"cart update failed"}`);
+          }
         }
+        reply += `\n\n${outcomes.join(" ")}`;
+        setPendingAction(null);
       }
 
       add({ role: "assistant", content: reply });
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(reply));
+      if ("speechSynthesis" in window && !muted) {
+        window.speechSynthesis.cancel(); // stop any previous utterance before starting a new one
+        const utterance = new SpeechSynthesisUtterance(reply);
+        window.speechSynthesis.speak(utterance);
       }
     } catch {
       add({ role: "assistant", content: "I am temporarily unavailable. Browse and filters remain available while I reconnect." });
@@ -148,9 +156,27 @@ export function AssistantWidget() {
           aria-label="ThreadMark AI assistant"
           className="swatch-tag fixed bottom-20 right-5 z-40 flex h-[min(600px,calc(100vh-110px))] w-[min(400px,calc(100vw-40px))] flex-col border border-loom bg-cotton shadow-2xl"
         >
-          <header className="border-b border-loom px-5 py-4">
-            <p className="font-data text-[10px] uppercase tracking-[.14em] text-ochre">Marketplace assistant</p>
-            <h2 className="font-display text-2xl">Ask about fabric.</h2>
+          <header className="flex items-start justify-between border-b border-loom px-5 py-4">
+            <div>
+              <p className="font-data text-[10px] uppercase tracking-[.14em] text-ochre">Marketplace assistant</p>
+              <h2 className="font-display text-2xl">Ask about fabric.</h2>
+            </div>
+            <button
+              type="button"
+              className="mt-1 text-indigo-dye transition-opacity hover:opacity-80"
+              title={muted ? "Unmute voice" : "Mute voice"}
+              aria-label={muted ? "Unmute voice" : "Mute voice"}
+              onClick={() => {
+                window.speechSynthesis.cancel();
+                setMuted(m => !m);
+              }}
+            >
+              {muted ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+              )}
+            </button>
           </header>
 
           <div ref={feed} className="flex-1 space-y-3 overflow-y-auto p-4">
