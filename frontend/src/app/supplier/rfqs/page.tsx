@@ -42,6 +42,7 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
 }
 
 export default function SupplierRfqs(){
+  const {run, isPending} = usePendingAction();
   const [rfqs,setRfqs]=useState<Rfq[]>([]);
   const [notice,setNotice]=useState('');
   const [quoteFor,setQuoteFor]=useState<string|null>(null);
@@ -122,7 +123,7 @@ export default function SupplierRfqs(){
                   <div><dt className="text-walnut/70">Needed by</dt><dd className="mt-1 font-data">{rfq.needed_by_date??'Flexible'}</dd></div>
                 </dl>
                 
-                {rfq.status==='open' && (!rfq.quotes || rfq.quotes.length === 0) && (
+                {rfq.status==='open' && (!rfq.quotes || rfq.quotes.length === 0) && quoteFor !== rfq.id && (
                   <div className="mt-5 flex gap-3">
                     <button onClick={()=>setQuoteFor(rfq.id)} className="rounded-sm bg-indigo-dye px-4 py-2.5 font-semibold text-cotton">Send quote</button>
                     <button disabled={isPending(rfq.id)} onClick={()=>void run(rfq.id, ()=>reject(rfq.id))} className="rounded-sm border border-danger px-4 py-2.5 font-semibold text-danger disabled:opacity-50">Reject</button>
@@ -133,8 +134,9 @@ export default function SupplierRfqs(){
                     <label><span className="mb-1 block text-sm font-semibold">Quoted ₹/m</span><input value={price} onChange={e=>setPrice(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-cotton p-2.5"/></label>
                     <label><span className="mb-1 block text-sm font-semibold">Lead time (days)</span><input value={leadTime} onChange={e=>setLeadTime(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-cotton p-2.5"/></label>
                     <label><span className="mb-1 block text-sm font-semibold">Notes</span><input value={notes} onChange={e=>setNotes(e.target.value)} className="w-full border border-loom bg-cotton p-2.5"/></label>
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-3 flex gap-3">
                       <button className="rounded-sm bg-indigo-dye px-4 py-2.5 font-semibold text-cotton">Send structured quote</button>
+                      <button type="button" onClick={()=>setQuoteFor(null)} className="rounded-sm border border-loom px-4 py-2.5 font-semibold">Cancel</button>
                     </div>
                   </form>
                 )}
