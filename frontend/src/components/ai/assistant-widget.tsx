@@ -81,7 +81,7 @@ export function AssistantWidget() {
       }
 
       // Navigation
-      const navMatch = trimmed.match(/^(?:go to|open|take me to|view|go)\s+(back|previous page|dashboard|cart|marketplace|home|ready stock|sustainable sourcing)\b/i);
+      const navMatch = trimmed.match(/^(?:(?:go to|open|take me to|view|go)\s+)?(back|previous page|dashboard|cart|marketplace|home|ready stock|sustainable sourcing|login|login page|register|signup|profile|orders|rfqs)\b/i);
       if (navMatch) {
         const dest = navMatch[1].toLowerCase();
         
@@ -95,12 +95,23 @@ export function AssistantWidget() {
         if (dest === "home") path = "/";
         else if (dest === "ready stock") path = "/marketplace?stockType=ready_stock";
         else if (dest === "sustainable sourcing") path = "/marketplace?sustainabilityTag=deadstock";
+        else if (dest === "login" || dest === "login page") path = "/login";
+        else if (dest === "register" || dest === "signup") path = "/register";
         else if (dest === "dashboard") {
           const role = useAuthStore.getState().user?.role;
           if (role) {
             path = `/${role}`;
           } else {
             add({ role: "assistant", content: "You need to log in to view a dashboard." });
+            return;
+          }
+        }
+        else if (dest === "profile" || dest === "orders" || dest === "rfqs") {
+          const role = useAuthStore.getState().user?.role;
+          if (role) {
+            path = `/${role}/${dest}`;
+          } else {
+            add({ role: "assistant", content: `You need to log in to view your ${dest}.` });
             return;
           }
         }
