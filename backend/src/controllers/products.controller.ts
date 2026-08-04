@@ -14,11 +14,11 @@ export async function listProducts(req: Request, res: Response, next: NextFuncti
   const params = listingSchema.parse(req.query); const values: unknown[] = []; const conditions: string[] = [];
   const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
   if (params.search) { const p = bind(`%${params.search}%`); conditions.push(`(p.name ILIKE ${p} OR p.description ILIKE ${p} OR p.composition ILIKE ${p} OR p.category ILIKE ${p})`); }
-  if (params.category) conditions.push(`p.category = ${bind(params.category)}`);
+  if (params.category) conditions.push(`p.category ILIKE ${bind(`%${params.category}%`)}`);
   if (params.gsmMin !== undefined) conditions.push(`p.gsm >= ${bind(params.gsmMin)}`);
   if (params.gsmMax !== undefined) conditions.push(`p.gsm <= ${bind(params.gsmMax)}`);
   if (params.composition) conditions.push(`p.composition ILIKE ${bind(`%${params.composition}%`)}`);
-  if (params.weaveType) conditions.push(`p.weave_type = ${bind(params.weaveType)}`);
+  if (params.weaveType) conditions.push(`p.weave_type ILIKE ${bind(`%${params.weaveType}%`)}`);
   if (params.stockType) conditions.push(`p.stock_type = ${bind(params.stockType)}`);
   if (params.certification) conditions.push(`${bind(params.certification)} = ANY(p.certifications)`);
   if (params.sustainabilityTag) conditions.push(`${bind(params.sustainabilityTag)} = ANY(p.sustainability_tags)`);
