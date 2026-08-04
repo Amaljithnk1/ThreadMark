@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAIStore } from "@/stores/ai-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 declare global {
   interface Window {
@@ -20,7 +22,8 @@ interface SpeechRecognition extends EventTarget {
 }
 
 export function AssistantWidget() {
-  const { messages, isThinking, isOpen, setOpen, add, setThinking } = useAIStore();
+  const router = useRouter();
+  const { messages, isThinking, isOpen, setOpen, add, setThinking, clear } = useAIStore();
   const [text, setText] = useState("");
   const [voiceError, setVoiceError] = useState("");
   const [muted, setMuted] = useState(false);
@@ -29,6 +32,11 @@ export function AssistantWidget() {
 
   useEffect(() => {
     api("/ai/warm", { method: "POST" }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => { api("/ai/warm", { method: "POST" }).catch(() => undefined); }, 4 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -72,15 +80,57 @@ export function AssistantWidget() {
         return;
       }
 
+      // Navigation
+      const navMatch = trimmed.match(/^(?:go to|open|take me to|view|go)\s+(back|previous page|dashboard|cart|marketplace|home|ready stock|sustainable sourcing)\b/i);
+      if (navMatch) {
+        const dest = navMatch[1].toLowerCase();
+        
+        if (dest === "back" || dest === "previous page") {
+          add({ role: "assistant", content: "Going back to the previous page." });
+          router.back();
+          return;
+        }
+
+        let path = `/${dest}`;
+        if (dest === "home") path = "/";
+        else if (dest === "ready stock") path = "/marketplace?stockType=ready_stock";
+        else if (dest === "sustainable sourcing") path = "/marketplace?sustainabilityTag=deadstock";
+        else if (dest === "dashboard") {
+          const role = useAuthStore.getState().user?.role;
+          if (role) {
+            path = `/${role}`;
+          } else {
+            add({ role: "assistant", content: "You need to log in to view a dashboard." });
+            return;
+          }
+        }
+        
+        add({ role: "assistant", content: `Taking you to ${dest}.` });
+        router.push(path);
+        return;
+      }
+
+      // Actions
+      if (/^(?:log out|logout|sign out)\b/i.test(trimmed)) {
+        add({ role: "assistant", content: "Logging you out." });
+        try {
+          await api("/auth/logout", { method: "POST" });
+        } finally {
+          useAuthStore.getState().clear();
+          window.location.assign("/");
+        }
+        return;
+      }
+
       // Natural search → redirect to marketplace
-      if (/^(search|find|show me|looking for)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
+      if (/^(search|find|show( me)?|looking for)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
         const search = await api<{ data: { filters: Record<string, unknown> } }>(
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
         );
         sessionStorage.setItem("threadmark-ai-filters", JSON.stringify(search.data.filters));
         add({ role: "assistant", content: "I translated your request into marketplace filters and opened matching material lots." });
-        window.location.assign("/marketplace");
+        router.push("/marketplace");
         return;
       }
 
@@ -161,22 +211,36 @@ export function AssistantWidget() {
               <p className="font-data text-[10px] uppercase tracking-[.14em] text-ochre">Marketplace assistant</p>
               <h2 className="font-display text-2xl">Ask about fabric.</h2>
             </div>
-            <button
-              type="button"
-              className="mt-1 text-indigo-dye transition-opacity hover:opacity-80"
-              title={muted ? "Unmute voice" : "Mute voice"}
-              aria-label={muted ? "Unmute voice" : "Mute voice"}
-              onClick={() => {
-                window.speechSynthesis.cancel();
-                setMuted(m => !m);
-              }}
-            >
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="text-xs font-semibold text-indigo-dye transition-opacity hover:opacity-80"
+                onClick={() => {
+                  window.speechSynthesis?.cancel();
+                  clear();
+                  setPendingAction(null);
+                }}
+                title="Start a new conversation"
+              >
+                New chat
+              </button>
+              <button
+                type="button"
+                className="mt-1 text-indigo-dye transition-opacity hover:opacity-80"
+                title={muted ? "Unmute voice" : "Mute voice"}
+                aria-label={muted ? "Unmute voice" : "Mute voice"}
+                onClick={() => {
+                  window.speechSynthesis.cancel();
+                  setMuted(m => !m);
+                }}
+              >
               {muted ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
               )}
             </button>
+            </div>
           </header>
 
           <div ref={feed} className="flex-1 space-y-3 overflow-y-auto p-4">
