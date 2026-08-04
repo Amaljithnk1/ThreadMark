@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { toPreview, type ApiProduct } from "@/components/marketplace/marketplace-browser";
 import { ProductCard, type ProductPreview } from "@/components/marketplace/product-card";
 import { api } from "@/lib/api";
 
@@ -14,8 +15,8 @@ export default function Home() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      api<{ data: ProductPreview[] }>("/products?limit=8")
-        .then((r) => setProducts(r.data))
+      api<{ data: ApiProduct[] }>("/products?limit=8")
+        .then((r) => setProducts(r.data.map(toPreview)))
         .catch(() => setError(true))
         .finally(() => setLoading(false));
     }, 0);
