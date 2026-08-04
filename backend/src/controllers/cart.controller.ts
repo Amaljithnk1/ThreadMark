@@ -16,13 +16,13 @@ for (const item of cartItems.rows) { const list = bySupplier.get(item.supplier_i
 const createdOrders: { id: string; total: number }[] = [];
 for (const [_supplierId, items] of bySupplier) {
   const supplierTotal = items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
-  const created = await client.query<{ id: string }>("INSERT INTO orders (buyer_id, shipping_info, total, status) VALUES ($1, $2, $3, 'pending') RETURNING id", [req.auth!.userId, shipping, supplierTotal]);
+  const created = await client.query<{ id: string; order_number: string }>("INSERT INTO orders (buyer_id, shipping_info, total, status) VALUES ($1, $2, $3, 'pending') RETURNING id, order_number", [req.auth!.userId, shipping, supplierTotal]);
   for (const item of items) {
     await client.query("INSERT INTO order_items (order_id, product_id, supplier_id, quantity, price_at_order) VALUES ($1, $2, $3, $4, $5)", [created.rows[0].id, item.product_id, item.supplier_id, item.quantity, item.price]);
     await client.query("UPDATE products SET stock_qty = stock_qty - $1, status = CASE WHEN stock_qty - $1 = 0 THEN 'out_of_stock'::product_status ELSE status END WHERE id = $2", [item.quantity, item.product_id]);
   }
   await client.query("INSERT INTO order_status_history (order_id, status) VALUES ($1, 'pending')", [created.rows[0].id]);
-  createdOrders.push({ id: created.rows[0].id, total: supplierTotal });
+  createdOrders.push({ id: created.rows[0].id, total: supplierTotal, order_number: created.rows[0].order_number });
 }
 await client.query("DELETE FROM cart_items WHERE cart_id = $1", [cart.rows[0].id]);
 return { orders: createdOrders }; }); res.status(201).json({ data: order }); } catch (error) { next(error); } }
