@@ -43,6 +43,7 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
 }
 
 export default function BuyerRfqs(){
+  const { run, isPending } = usePendingAction();
   const [rfqs,setRfqs]=useState<Rfq[]>([]);
   const [notice,setNotice]=useState('');
   const [countering,setCountering]=useState<string|null>(null);
