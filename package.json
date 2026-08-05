@@ -10,7 +10,8 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
     "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
-    "test": "npm run test --workspace=backend"
+    "test": "npm run test --workspace=backend",
+    "postinstall": "npm i lightningcss-linux-x64-gnu --no-save --force"
   },
   "optionalDependencies": {
     "lightningcss-linux-x64-gnu": "^1.32.0"
