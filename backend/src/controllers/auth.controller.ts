@@ -10,4 +10,4 @@ function parse<T>(schema: { safeParse(input: unknown): { success: boolean; data?
 export async function register(req: Request, res: Response, next: NextFunction) { try { const result = await auth.register(parse(registerSchema, req.body)); res.cookie("access_token", result.token, cookieOptions).status(201).json(result); } catch (error) { next(error); } }
 export async function login(req: Request, res: Response, next: NextFunction) { try { const result = await auth.login(parse(loginSchema, req.body)); res.cookie("access_token", result.token, cookieOptions).status(200).json(result); } catch (error) { next(error); } }
 export function logout(_req: Request, res: Response) { res.clearCookie("access_token", { ...cookieOptions, maxAge: undefined }).status(204).send(); }
-export function me(req: Request, res: Response) { res.json({ user: req.auth }); }
+export function me(req: Request, res: Response) { res.json({ user: { id: req.auth!.userId, email: req.auth!.email, role: req.auth!.role } }); }
