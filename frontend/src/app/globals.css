@@ -25,4 +25,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .swatch-tag { clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
 .swatch-notch { position: relative; }
 .swatch-notch::after { content: ""; position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #EDE6D8; box-shadow: 0 0 0 1px rgba(43,36,28,.45); }
+
+/* Premium UI Polish (Test) */
+a, button, input, select, textarea {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+input, select, textarea {
+  box-shadow: inset 0 1px 3px rgba(43, 36, 28, 0.04);
+}
+input:hover, select:hover, textarea:hover {
+  border-color: #797161 !important; /* Slightly darker loom color on hover */
+}
+button:not(:disabled) {
+  box-shadow: 0 2px 5px rgba(43, 36, 28, 0.08);
+}
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(43, 36, 28, 0.12);
+}
+button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(43, 36, 28, 0.1);
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
