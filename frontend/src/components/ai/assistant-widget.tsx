@@ -146,7 +146,7 @@ export function AssistantWidget() {
       }
 
       // General chat
-      const result = await api<{ data: { message: string; actions?: { type: string; productId: string; productName: string; quantity: number }[] | null; pendingAction?: {productId:string;productName:string;quantity:number|null}[] | null } }>(
+      const result = await api<{ data: { message: string; actions?: { type: string; productId?: string; productName?: string; quantity?: number; productIds?: string[] }[] | null; pendingAction?: {productId:string;productName:string;quantity:number|null}[] | null } }>(
         "/ai/chat",
         {
           method: "POST",
@@ -164,14 +164,17 @@ export function AssistantWidget() {
       if (result.data.actions?.length) {
         const outcomes:string[]=[];
         for(const a of result.data.actions){
-          try{
-            await api("/cart/items",{method:"POST",body:JSON.stringify({productId:a.productId,quantity:a.quantity})});
-            outcomes.push(`Added ${a.quantity}m of ${a.productName}.`);
-          }catch(cause){
-            outcomes.push(`Could not add ${a.productName}: ${cause instanceof Error?cause.message:"cart update failed"}`);
+          if(a.type==='compare'&&a.productIds?.length){sessionStorage.setItem("threadmark-compare-products",JSON.stringify(a.productIds));window.location.assign("/compare");}
+          else if(a.type==='add_to_cart'&&a.productId&&a.quantity){
+            try{
+              await api("/cart/items",{method:"POST",body:JSON.stringify({productId:a.productId,quantity:a.quantity})});
+              outcomes.push(`Added ${a.quantity}m of ${a.productName}.`);
+            }catch(cause){
+              outcomes.push(`Could not add ${a.productName}: ${cause instanceof Error?cause.message:"cart update failed"}`);
+            }
           }
         }
-        reply += `\n\n${outcomes.join(" ")}`;
+        if(outcomes.length) reply += `\n\n${outcomes.join(" ")}`;
         setPendingAction(null);
       }
 
