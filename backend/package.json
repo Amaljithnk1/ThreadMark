@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm run db:migrate && tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node dist/scripts/migrate.js",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
