@@ -29,7 +29,7 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
   }
 
   return (
-    <form onSubmit={submit} className="mt-4 grid gap-4 border-t border-loom pt-4 sm:grid-cols-3">
+    <form onSubmit={handleCounter} className="mt-4 grid gap-4 border-t border-loom pt-4 sm:grid-cols-3">
       {error&&<p className="col-span-3 text-sm text-danger">{error}</p>}
       <label><span className="mb-1 block text-sm font-semibold">Counter ₹/m</span><input value={price} onChange={e=>setPrice(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
       <label><span className="mb-1 block text-sm font-semibold">Lead time (days)</span><input value={leadTime} onChange={e=>setLeadTime(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
