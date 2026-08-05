@@ -22,8 +22,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
-    "@tailwindcss/oxide-win32-x64-msvc": "^4",
-    "lightningcss-win32-x64-msvc": "^1.32.0",
     "playwright": "^1.62.1",
     "tailwindcss": "^4",
     "typescript": "^5"
