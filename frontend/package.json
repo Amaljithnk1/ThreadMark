@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm i @lightningcss/linux-x64-gnu @lightningcss/linux-x64-musl --no-save && next build",
     "start": "next start",
     "lint": "eslint"
   },

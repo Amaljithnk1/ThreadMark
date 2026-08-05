@@ -10,6 +10,20 @@ import {
   YAxis,
 } from "recharts";
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="border border-loom bg-cotton p-3 shadow-sm">
+        <p className="font-data text-xs uppercase text-ochre mb-1">{payload[0].payload.period}</p>
+        <p className="font-semibold text-indigo-dye">
+          ₹{Number(payload[0].value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function BarChart({ data }: { data: { period: string; revenue: string | number }[] }) {
   const [range, setRange] = useState<"3M" | "6M" | "1Y">("6M");
 
@@ -39,20 +53,6 @@ export function BarChart({ data }: { data: { period: string; revenue: string | n
       revenue: found ? Number(found.revenue) : 0,
     };
   });
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="border border-loom bg-cotton p-3 shadow-sm">
-          <p className="font-data text-xs uppercase text-ochre mb-1">{payload[0].payload.period}</p>
-          <p className="font-semibold text-indigo-dye">
-            ₹{Number(payload[0].value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div>

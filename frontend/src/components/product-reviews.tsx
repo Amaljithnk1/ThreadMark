@@ -37,7 +37,7 @@ export function ProductReviews({ productId, supplierId }: { productId: string, s
     try {
       const [r, e] = await Promise.all([
         api<{ data: Review[] }>(`/products/${productId}/reviews`).catch(() => ({ data: [] })),
-        api<{ data: { eligible: boolean, existingReview: any } }>(`/products/${productId}/reviews/eligibility`).catch(() => ({ data: { eligible: false, existingReview: null } }))
+        api<{ data: { eligible: boolean, existingReview: {rating: number, comment: string} | null } }>(`/products/${productId}/reviews/eligibility`).catch(() => ({ data: { eligible: false, existingReview: null } }))
       ]);
       setReviews(r.data);
       setEligible(e.data.eligible);
