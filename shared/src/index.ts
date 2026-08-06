@@ -94,5 +94,6 @@ export const rfqQuoteSchema = z.object({
   quotedPrice: z.coerce.number().nonnegative(),
   quotedLeadTimeDays: z.coerce.number().int().nonnegative(),
   notes: z.string().trim().max(2000).optional(),
+  shippingInfo: shippingInfoSchema.optional(),
 });
 export type RfqQuoteInput = z.infer<typeof rfqQuoteSchema>;

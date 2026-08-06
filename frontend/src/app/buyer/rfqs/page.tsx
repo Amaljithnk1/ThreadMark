@@ -5,14 +5,31 @@ import {SiteHeader} from "@/components/site-header";
 import {api} from "@/lib/api";
 import {RequireRole} from "@/components/require-role";
 import { usePendingAction } from "@/hooks/use-pending-action";
+import type { ShippingInfo } from "@threadmark/shared";
 
 type Quote={id:string;quoted_price:number|string;quoted_lead_time_days:number;notes:string|null;status:string;proposed_by:string;parent_quote_id:string|null;created_at:string};
 type Rfq={id:string;product_name:string|null;custom_spec:{description?:string}|null;quantity:number;target_price:number|string|null;needed_by_date:string|null;status:string;quotes:Quote[]};
+type Fields = ShippingInfo;
+const defaultShipping: Fields = { recipient: "", addressLine1: "", city: "", state: "", postalCode: "", country: "India" };
 
-function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSuccess:()=>void}){
+function ShippingFields({fields, setFields}: {fields: Fields, setFields: (f: Fields) => void}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {([['recipient','Recipient name'],['addressLine1','Address line'],['city','City'],['state','State'],['postalCode','Postal code'],['country','Country']] as [keyof Fields,string][]).map(([key,label]) => 
+        <label key={key} className={key === 'addressLine1' ? 'sm:col-span-2' : ''}>
+          <span className="mb-1 block text-sm font-semibold">{label}</span>
+          <input value={fields[key]} onChange={e => setFields({...fields, [key]: e.target.value})} className="w-full border border-loom bg-[#f7f1e7] p-2.5" required/>
+        </label>
+      )}
+    </div>
+  )
+}
+
+function CounterForm({rfqId,quoteId,onSuccess,onCancel}:{rfqId:string,quoteId:string,onSuccess:()=>void,onCancel:()=>void}){
   const [price,setPrice]=useState('');
   const [leadTime,setLeadTime]=useState('');
   const [notes,setNotes]=useState('');
+  const [shipping,setShipping]=useState<Fields>(defaultShipping);
   const { run, isPending } = usePendingAction();
   const [error,setError]=useState('');
 
@@ -21,7 +38,7 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
     setError('');
     try {
       await run(quoteId, async () => {
-        await api(`/rfqs/${rfqId}/quotes/${quoteId}/counter`,{method:'POST',body:JSON.stringify({quotedPrice:Number(price),quotedLeadTimeDays:Number(leadTime),notes})});
+        await api(`/rfqs/${rfqId}/quotes/${quoteId}/counter`,{method:'POST',body:JSON.stringify({quotedPrice:Number(price),quotedLeadTimeDays:Number(leadTime),notes,shippingInfo:shipping})});
         onSuccess();
       });
     } catch(cause) {
@@ -30,14 +47,52 @@ function CounterForm({rfqId,quoteId,onSuccess}:{rfqId:string,quoteId:string,onSu
   }
 
   return (
-    <form onSubmit={submit} className="mt-4 grid gap-4 border-t border-loom pt-4 sm:grid-cols-3">
-      {error&&<p className="col-span-3 text-sm text-danger">{error}</p>}
-      <label><span className="mb-1 block text-sm font-semibold">Counter ₹/m</span><input value={price} onChange={e=>setPrice(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
-      <label><span className="mb-1 block text-sm font-semibold">Lead time (days)</span><input value={leadTime} onChange={e=>setLeadTime(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
-      <label><span className="mb-1 block text-sm font-semibold">Notes</span><input value={notes} onChange={e=>setNotes(e.target.value)} className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
-      <div className="sm:col-span-3 flex gap-3">
-        <button disabled={isPending(quoteId)} className="rounded-sm bg-indigo-dye px-4 py-2 font-semibold text-cotton disabled:opacity-60">Send counter</button>
+    <form onSubmit={submit} className="mt-4 border-t border-loom pt-4">
+      {error&&<p className="mb-4 text-sm text-danger">{error}</p>}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <label><span className="mb-1 block text-sm font-semibold">Counter ₹/m</span><input value={price} onChange={e=>setPrice(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
+        <label><span className="mb-1 block text-sm font-semibold">Lead time (days)</span><input value={leadTime} onChange={e=>setLeadTime(e.target.value)} type="number" min="0" required className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
+        <label><span className="mb-1 block text-sm font-semibold">Notes</span><input value={notes} onChange={e=>setNotes(e.target.value)} className="w-full border border-loom bg-[#f7f1e7] p-2.5"/></label>
       </div>
+      <div className="mt-6 mb-4">
+        <p className="mb-3 font-semibold text-ochre">Shipping address (required if supplier accepts)</p>
+        <ShippingFields fields={shipping} setFields={setShipping} />
+      </div>
+      <div className="flex gap-3">
+        <button disabled={isPending(quoteId)} className="rounded-sm bg-indigo-dye px-4 py-2 font-semibold text-cotton disabled:opacity-60">Send counter</button>
+        <button type="button" onClick={onCancel} className="rounded-sm border border-loom px-4 py-2 font-semibold">Cancel</button>
+      </div>
+    </form>
+  )
+}
+
+function AcceptForm({quoteId, onCancel, onSuccess}: {quoteId:string, onCancel:()=>void, onSuccess:(orderId?:string)=>void}) {
+  const [shipping, setShipping] = useState<Fields>(defaultShipping);
+  const [error, setError] = useState('');
+  const { run, isPending } = usePendingAction();
+  
+  async function submit(e:React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    try {
+       await run(quoteId, async () => {
+         const r=await api<{data:{orderId?:string}}>('/rfqs/quotes/'+quoteId+'/decision',{method:'POST',body:JSON.stringify({decision:'accepted',shippingInfo:shipping})});
+         onSuccess(r.data?.orderId);
+       });
+    } catch(err) {
+       setError(err instanceof Error?err.message:'Accept failed');
+    }
+  }
+  
+  return (
+    <form onSubmit={submit} className="mt-4 border-t border-loom pt-4">
+       <p className="mb-4 font-semibold text-ochre">Where should we send this order?</p>
+       <ShippingFields fields={shipping} setFields={setShipping} />
+       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+       <div className="mt-5 flex gap-3">
+         <button disabled={isPending(quoteId)} className="rounded-sm bg-indigo-dye px-4 py-2 font-semibold text-cotton disabled:opacity-60">Confirm & Place order</button>
+         <button type="button" onClick={onCancel} className="rounded-sm border border-loom px-4 py-2 font-semibold">Cancel</button>
+       </div>
     </form>
   )
 }
@@ -47,6 +102,7 @@ export default function BuyerRfqs(){
   const [rfqs,setRfqs]=useState<Rfq[]>([]);
   const [notice,setNotice]=useState('');
   const [countering,setCountering]=useState<string|null>(null);
+  const [accepting,setAccepting]=useState<string|null>(null);
 
   async function load(){
     try{
@@ -62,11 +118,11 @@ export default function BuyerRfqs(){
     return()=>window.clearTimeout(id)
   },[]);
 
-  async function decide(quoteId:string,decision:'accepted'|'rejected'){
+  async function rejectQuote(quoteId:string){
     try{
-      const r=await api<{data:{orderId?:string}}>('/rfqs/quotes/'+quoteId+'/decision',{method:'POST',body:JSON.stringify({decision})});
+      await api<{data:{orderId?:string}}>('/rfqs/quotes/'+quoteId+'/decision',{method:'POST',body:JSON.stringify({decision:'rejected'})});
       await load();
-      setNotice(decision==='accepted'?`Quote accepted. Order ${r.data.orderId??''} was created.`:'Quote rejected.')
+      setNotice('Quote rejected.');
     }catch(cause){
       setNotice(cause instanceof Error?cause.message:'Quote decision failed.')
     }
@@ -100,22 +156,26 @@ export default function BuyerRfqs(){
                         <p className="mt-1 text-sm">Lead time: {quote.quoted_lead_time_days} days</p>
                         {quote.notes&&<p className="mt-3 border-t border-loom pt-3 text-sm">{quote.notes}</p>}
                         
-                        {isActiveLeaf && !isMine && countering !== quote.id && (
+                        {isActiveLeaf && !isMine && countering !== quote.id && accepting !== quote.id && (
                           <div className="mt-4 flex gap-3">
-                            <button disabled={isPending(quote.id)} onClick={()=>void run(quote.id, ()=>decide(quote.id,'accepted'))} className="rounded-sm bg-indigo-dye px-3 py-2 font-semibold text-cotton disabled:opacity-50">Accept to order</button>
-                            <button disabled={isPending(quote.id)} onClick={()=>void run(quote.id, ()=>decide(quote.id,'rejected'))} className="rounded-sm border border-danger px-3 py-2 font-semibold text-danger disabled:opacity-50">Reject</button>
+                            <button onClick={()=>setAccepting(quote.id)} className="rounded-sm bg-indigo-dye px-3 py-2 font-semibold text-cotton">Accept to order</button>
+                            <button disabled={isPending(quote.id)} onClick={()=>void run(quote.id, ()=>rejectQuote(quote.id))} className="rounded-sm border border-danger px-3 py-2 font-semibold text-danger disabled:opacity-50">Reject</button>
                             <button onClick={()=>setCountering(quote.id)} className="rounded-sm border border-indigo-dye px-3 py-2 font-semibold text-indigo-dye">Counter offer</button>
                           </div>
                         )}
-                        {isActiveLeaf && !isMine && countering === quote.id && (
-                          <div className="mt-4">
-                            <div className="flex justify-between">
-                              <p className="font-semibold">Countering offer</p>
-                              <button onClick={()=>setCountering(null)} className="text-sm underline">Cancel</button>
-                            </div>
-                            <CounterForm rfqId={rfq.id} quoteId={quote.id} onSuccess={()=>{setCountering(null);void load();}} />
-                          </div>
+                        
+                        {isActiveLeaf && !isMine && accepting === quote.id && (
+                          <AcceptForm quoteId={quote.id} onCancel={()=>setAccepting(null)} onSuccess={(orderId)=>{
+                            setAccepting(null);
+                            setNotice(`Quote accepted. Order ${orderId??''} was created.`);
+                            void load();
+                          }} />
                         )}
+                        
+                        {isActiveLeaf && !isMine && countering === quote.id && (
+                          <CounterForm rfqId={rfq.id} quoteId={quote.id} onCancel={()=>setCountering(null)} onSuccess={()=>{setCountering(null);void load();}} />
+                        )}
+                        
                         {isActiveLeaf && isMine && (
                           <p className="mt-4 text-sm font-semibold text-ochre">Waiting on supplier response...</p>
                         )}
