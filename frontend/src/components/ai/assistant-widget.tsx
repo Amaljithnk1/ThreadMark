@@ -139,9 +139,12 @@ export function AssistantWidget() {
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
         );
-        sessionStorage.setItem("threadmark-ai-filters", JSON.stringify(search.data.filters));
+        const queryParams = new URLSearchParams();
+        for (const [k, v] of Object.entries(search.data.filters)) {
+          if (v) queryParams.set(k, String(v));
+        }
         add({ role: "assistant", content: "I translated your request into marketplace filters and opened matching material lots." });
-        router.push("/marketplace");
+        router.push(`/marketplace?${queryParams.toString()}`);
         return;
       }
 
