@@ -134,7 +134,7 @@ export function AssistantWidget() {
       }
 
       // Fill product form
-      if (/^(?:add|fill|create|populate|draft)\b.*(?:product|form|details)/i.test(trimmed) && window.location.pathname.includes("/supplier/products")) {
+      if (/^(?:add|fill|create|populate|draft|set)\b/i.test(trimmed) && window.location.pathname.includes("/supplier/products")) {
         const fill = await api<{ data: { form: Record<string, unknown> } }>(
           "/ai/fill-product-form",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
