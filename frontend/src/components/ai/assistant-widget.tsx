@@ -133,19 +133,16 @@ export function AssistantWidget() {
         return;
       }
 
-      // Fill product form
-      if (/^(?:add|fill|create|populate|draft|set)\b/i.test(trimmed) && window.location.pathname.includes("/supplier/products")) {
-        const fill = await api<{ data: { form: Record<string, unknown>, message?: string } }>(
+      // Fill product form (conversational stateful form filler)
+      if (window.location.pathname.endsWith("/supplier/products/new") || window.location.pathname.includes("/edit")) {
+        const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
           "/ai/fill-product-form",
-          { method: "POST", body: JSON.stringify({ query: trimmed }) }
+          { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
         );
-        if (Object.keys(fill.data.form).length > 0) {
+        if (Object.keys(fill.data.form || {}).length > 0) {
           window.dispatchEvent(new CustomEvent("threadmark-ai-fill-form", { detail: { action: "fill", data: fill.data.form } }));
         }
-        const defaultMsg = Object.keys(fill.data.form).length > 0 
-          ? "I've drafted the product form for you. Please review the details before saving!" 
-          : "I couldn't identify any concrete product details to add.";
-        add({ role: "assistant", content: fill.data.message || defaultMsg });
+        add({ role: "assistant", content: fill.data.message });
         return;
       }
 
