@@ -1,4 +1,4 @@
-import { converse } from "./src/lib/ai.ts";
+import { converse } from "./src/lib/ai.js";
 import { z } from "zod";
 
 async function main() {
