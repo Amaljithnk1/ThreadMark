@@ -103,3 +103,24 @@ const safeForm=extractedFormSchema.safeParse(normalizedForm);
 const validForm=safeForm.success?safeForm.data:{};
 const message=typeof parsed.message==='string'?parsed.message:Object.keys(validForm).length?"I've drafted the product form for you. Please review the details before saving!":"I couldn't identify any concrete product details to add.";
 res.json({data:{form:validForm,message}});}catch(error){next(error)}}
+const extractedProfileSchema=z.object({businessName:z.union([z.string(),z.literal("")]).optional().catch(undefined),businessType:z.union([z.string(),z.literal("")]).optional().catch(undefined),email:z.union([z.string(),z.literal("")]).optional().catch(undefined),phone:z.union([z.string(),z.literal("")]).optional().catch(undefined),businessAddress:z.union([z.string(),z.literal("")]).optional().catch(undefined),operatingHours:z.union([z.string(),z.literal("")]).optional().catch(undefined),moq:numericString,productCategories:commaString,fabricTypesOffered:commaString}).strip();
+export async function fillProfileForm(req:Request,res:Response,next:NextFunction){try{const input=fillFormSchema.parse(req.body);const instruction=`Extract business profile form fields from this supplier conversation. Return a JSON object with two keys: "form" (the explicitly mentioned valid fields) and "message" (your conversational reply).
+Allowed form keys: businessName, businessType, email, phone, businessAddress, operatingHours, moq, productCategories, fabricTypesOffered.
+CRITICAL RULES:
+1. Do NOT invent or guess any values.
+2. ALWAYS extract fields mentioned in the latest message, even if updating/overwriting.
+3. Only ask for clarification if a provided value is ambiguous. Do NOT ask for missing info that the user did not provide.
+4. If they ask to clear a specific field, output the field with an empty string as its value. If they ask to clear all fields, output ALL allowed form keys with an empty string.
+5. Always output exactly this format: {"form": {"key": "value"}, "message": "Your reply here."}`;const messages:{role:"user"|"assistant";content:string}[]=[{role:"user",content:instruction},...input.messages.map(m=>({role:m.role,content:m.content}))];const result:any=await converse("You are a precise JSON extraction service.",messages);const raw=result?.choices?.[0]?.message?.content??"{}";const matched=raw.match(/\{[\s\S]*\}/);let parsed:any={};try{parsed=JSON.parse(matched?.[0]??"{}");}catch{}
+const rawForm=parsed.form||{};
+const normalizedForm:any={};
+const keyMap:Record<string,string>={businessname:'businessName',businesstype:'businessType',email:'email',phone:'phone',businessaddress:'businessAddress',operatinghours:'operatingHours',moq:'moq',productcategories:'productCategories',categories:'productCategories',fabrictypesoffered:'fabricTypesOffered',fabrics:'fabricTypesOffered',fabrictypes:'fabricTypesOffered'};
+for(const [k,v] of Object.entries(rawForm)){
+  const normK=k.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const mapped=keyMap[normK]||k;
+  normalizedForm[mapped]=v;
+}
+const safeForm=extractedProfileSchema.safeParse(normalizedForm);
+const validForm=safeForm.success?safeForm.data:{};
+const message=typeof parsed.message==='string'?parsed.message:Object.keys(validForm).length?"I've drafted the profile form for you. Please review the details before saving!":"I couldn't identify any concrete profile details to add.";
+res.json({data:{form:validForm,message}});}catch(error){next(error)}}
