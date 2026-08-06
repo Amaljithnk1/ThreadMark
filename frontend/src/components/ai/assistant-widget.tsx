@@ -167,7 +167,10 @@ export function AssistantWidget() {
       if (result.data.actions?.length) {
         const outcomes:string[]=[];
         for(const a of result.data.actions){
-          if(a.type==='compare'&&a.productIds?.length){sessionStorage.setItem("threadmark-compare-products",JSON.stringify(a.productIds));window.location.assign("/compare");}
+          if(a.type==='compare'&&a.productIds?.length){
+            sessionStorage.setItem("threadmark-compare-products",JSON.stringify(a.productIds));
+            router.push("/compare");
+          }
           else if(a.type==='add_to_cart'&&a.productId&&a.quantity){
             try{
               await api("/cart/items",{method:"POST",body:JSON.stringify({productId:a.productId,quantity:a.quantity})});
