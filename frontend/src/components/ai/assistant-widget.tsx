@@ -134,7 +134,7 @@ export function AssistantWidget() {
       }
 
       // Natural search → redirect to marketplace
-      if (/^(search|find|show( me)?|looking for)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
+      if (/^(search|find|show( me)?|looking for|set|filter|apply)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
         const search = await api<{ data: { filters: Record<string, unknown> } }>(
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
