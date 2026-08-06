@@ -92,10 +92,11 @@ CRITICAL RULES:
 6. Always output exactly this format: {"form": {"key": "value"}, "message": "Your reply here."}`;const messages:{role:"user"|"assistant";content:string}[]=[{role:"user",content:instruction},...input.messages.map(m=>({role:m.role,content:m.content}))];const result:any=await converse("You are a precise JSON extraction service.",messages);const raw=result?.choices?.[0]?.message?.content??"{}";const matched=raw.match(/\{[\s\S]*\}/);let parsed:any={};try{parsed=JSON.parse(matched?.[0]??"{}");}catch{}
 const rawForm=parsed.form||{};
 const normalizedForm:any={};
+const keyMap:Record<string,string>={productname:'name',name:'name',category:'category',description:'description',gsm:'gsm',composition:'composition',weavetype:'weaveType',width:'width',shrinkagerate:'shrinkageRate',colorfastnessrating:'colorfastnessRating',colorfastness:'colorfastnessRating',colors:'colors',availablecolors:'colors',stockqty:'stockQty',availablestock:'stockQty',stocktype:'stockType',leadtimedays:'leadTimeDays',price:'price',pricepermetre:'price',certifications:'certifications',sustainabilitytags:'sustainabilityTags',tiers:'tiers',bulktiers:'tiers'};
 for(const [k,v] of Object.entries(rawForm)){
   const normK=k.toLowerCase().replace(/[^a-z0-9]/g,'');
-  if(normK==='productname'||normK==='name') normalizedForm.name=v;
-  else normalizedForm[k]=v;
+  const mapped=keyMap[normK]||k;
+  normalizedForm[mapped]=v;
 }
 const safeForm=extractedFormSchema.safeParse(normalizedForm);
 const validForm=safeForm.success?safeForm.data:{};
