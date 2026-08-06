@@ -13,7 +13,19 @@ const baseSelect = `SELECT p.id, p.supplier_id, p.name, p.category, p.descriptio
 export async function listProducts(req: Request, res: Response, next: NextFunction) { try {
   const params = listingSchema.parse(req.query); const values: unknown[] = []; const conditions: string[] = [];
   const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
-  if (params.search) { const p = bind(`%${params.search}%`); conditions.push(`(p.name ILIKE ${p} OR p.description ILIKE ${p} OR p.composition ILIKE ${p} OR p.category ILIKE ${p})`); }
+  if (params.search) {
+    const terms = params.search.split(/\s*(?:and|or|vs|,)\s*/i).filter(Boolean);
+    if (terms.length > 1) {
+      const termConds = terms.map(term => {
+        const p = bind(`%${term.trim()}%`);
+        return `(p.name ILIKE ${p} OR p.description ILIKE ${p} OR p.composition ILIKE ${p} OR p.category ILIKE ${p})`;
+      });
+      conditions.push(`(${termConds.join(" OR ")})`);
+    } else {
+      const p = bind(`%${params.search}%`);
+      conditions.push(`(p.name ILIKE ${p} OR p.description ILIKE ${p} OR p.composition ILIKE ${p} OR p.category ILIKE ${p})`);
+    }
+  }
   if (params.category) conditions.push(`p.category ILIKE ${bind(`%${params.category}%`)}`);
   if (params.gsmMin !== undefined) conditions.push(`p.gsm >= ${bind(params.gsmMin)}`);
   if (params.gsmMax !== undefined) conditions.push(`p.gsm <= ${bind(params.gsmMax)}`);

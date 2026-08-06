@@ -175,7 +175,7 @@ export function AssistantWidget() {
       }
 
       // Natural search → redirect to marketplace
-      if (/^(search|find|show( me)?|looking for|set|filter|apply)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
+      if (/^(search|find|show( me)?|looking for|set|filter|apply|compare)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
         const search = await api<{ data: { filters: Record<string, unknown> } }>(
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
@@ -188,7 +188,8 @@ export function AssistantWidget() {
              updatePayload[k] = String(v);
           }
         }
-        add({ role: "assistant", content: "I translated your request into marketplace filters and opened matching material lots." });
+        const isCompare = /^compare\b/i.test(trimmed);
+        add({ role: "assistant", content: isCompare ? "I've pulled up those materials for you. You can select up to 4 of them using the 'Compare this material' checkboxes below the images to compare them side-by-side!" : "I translated your request into marketplace filters and opened matching material lots." });
         if (window.location.pathname === "/marketplace") {
            window.dispatchEvent(new CustomEvent("threadmark-ai-filter", { detail: { action: "update", filters: updatePayload } }));
            window.history.pushState(null, "", `/marketplace?${queryParams.toString()}`);
