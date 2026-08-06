@@ -30,15 +30,28 @@ export function generatePurchaseOrder(order: any, role: 'buyer' | 'supplier' | '
   doc.setFontSize(12);
   doc.text('Ship To:', 100, 55);
   doc.setFontSize(10);
-  if (order.shipping_info) {
-    const address = order.shipping_info.address || 'Address not provided';
-    const cityState = `${order.shipping_info.city || ''} ${order.shipping_info.state || ''} ${order.shipping_info.pincode || ''}`.trim();
-    doc.text(address, 100, 62);
+  if (order.shipping_info && (order.shipping_info.addressLine1 || order.shipping_info.address)) {
+    const recipient = order.shipping_info.recipient || '';
+    const address = order.shipping_info.addressLine1 || order.shipping_info.address || 'Address not provided';
+    const cityState = `${order.shipping_info.city || ''} ${order.shipping_info.state || ''} ${order.shipping_info.postalCode || order.shipping_info.pincode || ''}`.trim();
+    const country = order.shipping_info.country || '';
+
+    let yPos = 62;
+    if (recipient) {
+      doc.text(recipient, 100, yPos);
+      yPos += 6;
+    }
+    doc.text(address, 100, yPos);
     if (cityState) {
-      doc.text(cityState, 100, 68);
+      yPos += 6;
+      doc.text(cityState, 100, yPos);
+    }
+    if (country) {
+      yPos += 6;
+      doc.text(country, 100, yPos);
     }
   } else {
-    doc.text('Shipping address not provided', 100, 62);
+    doc.text(order.shipping_info?.address || 'Shipping address not provided', 100, 62);
   }
 
   // Items table
