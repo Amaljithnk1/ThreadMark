@@ -10,6 +10,7 @@ export function OnboardingChat({kind}:{kind:Kind}) {
   const [notice,setNotice]=useState("");
   const [error,setError]=useState("");
   const [saving,setSaving]=useState(false);
+  const [phoneValue,setPhoneValue]=useState("");
   const router=useRouter();
 
   useEffect(()=>{
@@ -36,7 +37,11 @@ export function OnboardingChat({kind}:{kind:Kind}) {
             update('businessName',data.businessName);
             update('businessType',data.businessType);
             update('email',data.email);
-            update('phone',data.phone);
+            if (data.phone !== undefined) {
+              const cleaned = String(data.phone).replace(/[^0-9+]/g, '');
+              update('phone', cleaned);
+              setPhoneValue(cleaned);
+            }
             update('businessAddress',data.businessAddress);
             update('operatingHours',data.operatingHours);
             update('categories',data.productCategories);
@@ -116,7 +121,11 @@ export function OnboardingChat({kind}:{kind:Kind}) {
               <label className="md:col-span-2"><span className="mb-1 block text-sm font-semibold">Business Name</span><input name="businessName" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Global Textiles Inc."/></label>
               <label><span className="mb-1 block text-sm font-semibold">Business type</span><input name="businessType" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Fabric Mill"/></label>
               <label><span className="mb-1 block text-sm font-semibold">Contact Email</span><input name="email" type="email" className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. contact@mill.com"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Contact Phone</span><input name="phone" className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 9876543210 (min 10 digits)"/></label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold">Contact Phone</span>
+                <input name="phone" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^0-9+]/g, ''))} className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 9876543210"/>
+                <span className="mt-1 block text-xs text-walnut/60">{phoneValue.replace(/[^0-9]/g, '').length} digits (minimum 10 required)</span>
+              </label>
               <label><span className="mb-1 block text-sm font-semibold">Business Address</span><input name="businessAddress" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 124 Industrial Park, Mumbai"/></label>
               <label><span className="mb-1 block text-sm font-semibold">Operating Hours</span><input name="operatingHours" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 9 AM - 6 PM"/></label>
               <label><span className="mb-1 block text-sm font-semibold">Product categories offered</span><input name="categories" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Shirting, Upholstery"/></label>
