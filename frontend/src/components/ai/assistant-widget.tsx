@@ -133,13 +133,41 @@ export function AssistantWidget() {
         return;
       }
 
+      // Clear filters
+      const clearMatch = /^(?:clear|remove|reset|delete)\b\s*(?:the\s+)?(all|everything|filters?|category|search|gsm|composition|weave|stock|certification|sustainability)?/i.exec(trimmed);
+      if (clearMatch) {
+        const target = (clearMatch[1] || "all").toLowerCase();
+        if (target === "all" || target === "everything" || target === "filters" || target === "filter") {
+          add({ role: "assistant", content: "I have cleared all filters." });
+          router.push("/marketplace");
+          return;
+        }
+        
+        const params = new URLSearchParams(window.location.search);
+        let cleared = false;
+        if (target.includes("category")) { params.delete("category"); cleared = true; }
+        if (target.includes("search")) { params.delete("search"); cleared = true; }
+        if (target.includes("gsm")) { params.delete("gsmMin"); params.delete("gsmMax"); cleared = true; }
+        if (target.includes("composition")) { params.delete("composition"); cleared = true; }
+        if (target.includes("weave")) { params.delete("weaveType"); cleared = true; }
+        if (target.includes("stock")) { params.delete("stockType"); cleared = true; }
+        if (target.includes("certification")) { params.delete("certification"); cleared = true; }
+        if (target.includes("sustainability")) { params.delete("sustainabilityTag"); cleared = true; }
+
+        if (cleared) {
+          add({ role: "assistant", content: `I have cleared the ${target} filter.` });
+          router.push(`/marketplace?${params.toString()}`);
+          return;
+        }
+      }
+
       // Natural search → redirect to marketplace
       if (/^(search|find|show( me)?|looking for|set|filter|apply)\b/i.test(trimmed) || /\b(buy|need|want|source|looking to buy)\b.*\b(fabric|cotton|wool|linen|silk|denim|polyester|material)\b/i.test(trimmed)) {
         const search = await api<{ data: { filters: Record<string, unknown> } }>(
           "/ai/natural-search",
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
         );
-        const queryParams = new URLSearchParams();
+        const queryParams = new URLSearchParams(window.location.search);
         for (const [k, v] of Object.entries(search.data.filters)) {
           if (v) queryParams.set(k, String(v));
         }
