@@ -139,24 +139,37 @@ export function AssistantWidget() {
         const target = (clearMatch[1] || "all").toLowerCase();
         if (target === "all" || target === "everything" || target === "filters" || target === "filter") {
           add({ role: "assistant", content: "I have cleared all filters." });
-          router.push("/marketplace");
+          if (window.location.pathname === "/marketplace") {
+            window.dispatchEvent(new CustomEvent("threadmark-ai-filter", { detail: { action: "clear" } }));
+            window.history.pushState(null, "", "/marketplace");
+          } else {
+            router.push("/marketplace");
+          }
           return;
         }
         
         const params = new URLSearchParams(window.location.search);
         let cleared = false;
-        if (target.includes("category")) { params.delete("category"); cleared = true; }
-        if (target.includes("search")) { params.delete("search"); cleared = true; }
-        if (target.includes("gsm")) { params.delete("gsmMin"); params.delete("gsmMax"); cleared = true; }
-        if (target.includes("composition")) { params.delete("composition"); cleared = true; }
-        if (target.includes("weave")) { params.delete("weaveType"); cleared = true; }
-        if (target.includes("stock")) { params.delete("stockType"); cleared = true; }
-        if (target.includes("certification")) { params.delete("certification"); cleared = true; }
-        if (target.includes("sustainability")) { params.delete("sustainabilityTag"); cleared = true; }
+        let keysCleared: string[] = [];
+        if (target.includes("category")) { params.delete("category"); keysCleared.push("category"); cleared = true; }
+        if (target.includes("search")) { params.delete("search"); keysCleared.push("search"); cleared = true; }
+        if (target.includes("gsm")) { params.delete("gsmMin"); params.delete("gsmMax"); keysCleared.push("gsmMin", "gsmMax"); cleared = true; }
+        if (target.includes("composition")) { params.delete("composition"); keysCleared.push("composition"); cleared = true; }
+        if (target.includes("weave")) { params.delete("weaveType"); keysCleared.push("weaveType"); cleared = true; }
+        if (target.includes("stock")) { params.delete("stockType"); keysCleared.push("stockType"); cleared = true; }
+        if (target.includes("certification")) { params.delete("certification"); keysCleared.push("certification"); cleared = true; }
+        if (target.includes("sustainability")) { params.delete("sustainabilityTag"); keysCleared.push("sustainabilityTag"); cleared = true; }
 
         if (cleared) {
           add({ role: "assistant", content: `I have cleared the ${target} filter.` });
-          router.push(`/marketplace?${params.toString()}`);
+          if (window.location.pathname === "/marketplace") {
+            const updatePayload: Record<string, string> = {};
+            for (const key of keysCleared) updatePayload[key] = "";
+            window.dispatchEvent(new CustomEvent("threadmark-ai-filter", { detail: { action: "update", filters: updatePayload } }));
+            window.history.pushState(null, "", `/marketplace?${params.toString()}`);
+          } else {
+            router.push(`/marketplace?${params.toString()}`);
+          }
           return;
         }
       }
@@ -168,11 +181,20 @@ export function AssistantWidget() {
           { method: "POST", body: JSON.stringify({ query: trimmed }) }
         );
         const queryParams = new URLSearchParams(window.location.search);
+        const updatePayload: Record<string, string> = {};
         for (const [k, v] of Object.entries(search.data.filters)) {
-          if (v) queryParams.set(k, String(v));
+          if (v) {
+             queryParams.set(k, String(v));
+             updatePayload[k] = String(v);
+          }
         }
         add({ role: "assistant", content: "I translated your request into marketplace filters and opened matching material lots." });
-        router.push(`/marketplace?${queryParams.toString()}`);
+        if (window.location.pathname === "/marketplace") {
+           window.dispatchEvent(new CustomEvent("threadmark-ai-filter", { detail: { action: "update", filters: updatePayload } }));
+           window.history.pushState(null, "", `/marketplace?${queryParams.toString()}`);
+        } else {
+           router.push(`/marketplace?${queryParams.toString()}`);
+        }
         return;
       }
 
