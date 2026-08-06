@@ -136,18 +136,18 @@ export function ProductReviews({ productId, supplierId }: { productId: string, s
           <div className="flex flex-col items-center justify-center md:items-start max-w-[240px] text-center md:text-left h-full">
             {eligible ? (
               <>
-                <div className="flex gap-2 w-full">
+                <div className="flex gap-2 w-full justify-center md:justify-start">
                   <button 
                     onClick={() => setShowForm(!showForm)} 
-                    className="bg-indigo-dye text-cotton px-6 py-3 font-semibold hover:bg-indigo-dye/90 w-full transition-colors"
+                    className="flex-1 whitespace-nowrap bg-indigo-dye text-cotton px-5 py-3 text-sm font-semibold hover:bg-indigo-dye/90 transition-colors"
                   >
-                    {existingReview ? "Edit your review" : "Write a review"}
+                    {existingReview ? "Edit review" : "Write a review"}
                   </button>
                   {existingReview && (
                     <button 
                       onClick={() => void handleDeleteReview()} 
                       disabled={submitting}
-                      className="border border-danger text-danger px-4 py-3 font-semibold hover:bg-danger/10 transition-colors disabled:opacity-50"
+                      className="shrink-0 whitespace-nowrap border border-danger text-danger px-5 py-3 text-sm font-semibold hover:bg-danger/10 transition-colors disabled:opacity-50"
                       title="Delete your review"
                     >
                       Delete
