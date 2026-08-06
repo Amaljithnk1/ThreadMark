@@ -33,8 +33,8 @@ export const buyerProfileSchema = z.object({
   industry: z.string().trim().min(2).max(120),
   productCategoriesInterest: stringList.min(1),
   preferredFabricTypes: stringList.min(1),
-  typicalOrderQuantity: z.string().trim().min(1).max(100),
-  budgetRange: z.string().trim().min(1).max(100),
+  typicalOrderQuantity: z.string().trim().regex(/^[\d\s\-,]+$/, "Enter numbers and hyphens only (e.g. 100-500)").max(100),
+  budgetRange: z.string().trim().regex(/^[\d\s\-.,$₹€£]+$/, "Enter a numeric budget range (e.g. 50-100)").max(100),
   additionalPreferences: z.string().trim().max(2000).optional(),
 });
 export const supplierProfileSchema = z.object({
@@ -42,7 +42,7 @@ export const supplierProfileSchema = z.object({
   businessType: z.string().trim().min(2).max(120),
   contactInfo: z.object({ email: z.string().email().optional(), phone: z.string().trim().max(40).optional().refine(val => !val || /^\+?[0-9\s\-()]+$/.test(val), "Enter a valid phone number") }).default({}),
   businessAddress: z.string().trim().min(5).max(500),
-  operatingHours: z.string().trim().min(2).max(300),
+  operatingHours: z.string().trim().regex(/\d/, "Enter valid operating hours (e.g. 9 AM - 5 PM)").max(300),
   productCategories: stringList.min(1),
   fabricTypesOffered: stringList.min(1),
   moq: z.coerce.number().int().min(1),
