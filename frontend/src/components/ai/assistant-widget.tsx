@@ -80,7 +80,7 @@ export function AssistantWidget() {
         return;
       }
       
-      if (window.location.pathname.endsWith("/supplier/profile")) {
+      if (window.location.pathname.includes("/supplier/profile")) {
         const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
           "/ai/fill-profile-form",
           { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
