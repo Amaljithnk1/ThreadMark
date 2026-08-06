@@ -133,6 +133,17 @@ export function AssistantWidget() {
         return;
       }
 
+      // Fill product form
+      if (/^(?:add|fill|create|populate|draft)\b.*(?:product|form|details)/i.test(trimmed) && window.location.pathname.includes("/supplier/products")) {
+        const fill = await api<{ data: { form: Record<string, unknown> } }>(
+          "/ai/fill-product-form",
+          { method: "POST", body: JSON.stringify({ query: trimmed }) }
+        );
+        window.dispatchEvent(new CustomEvent("threadmark-ai-fill-form", { detail: { action: "fill", data: fill.data.form } }));
+        add({ role: "assistant", content: "I've drafted the product form for you. Please review the details before saving!" });
+        return;
+      }
+
       // Clear filters
       const clearMatch = /^(?:clear|remove|reset|delete)\b\s*(?:the\s+)?(all|everything|filters?|category|search|gsm|composition|weave|stock|certification|sustainability)?/i.exec(trimmed);
       if (clearMatch) {
