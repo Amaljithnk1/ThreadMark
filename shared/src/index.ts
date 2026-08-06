@@ -40,7 +40,7 @@ export const buyerProfileSchema = z.object({
 export const supplierProfileSchema = z.object({
   businessName: z.string().trim().min(2).max(180),
   businessType: z.string().trim().min(2).max(120),
-  contactInfo: z.object({ email: z.string().email().optional(), phone: z.string().trim().max(40).optional() }).default({}),
+  contactInfo: z.object({ email: z.string().email().optional(), phone: z.string().trim().max(40).optional().refine(val => !val || /^\+?[0-9\s\-()]+$/.test(val), "Enter a valid phone number") }).default({}),
   businessAddress: z.string().trim().min(5).max(500),
   operatingHours: z.string().trim().min(2).max(300),
   productCategories: stringList.min(1),
