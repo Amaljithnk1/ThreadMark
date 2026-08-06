@@ -92,6 +92,18 @@ export function AssistantWidget() {
         return;
       }
 
+      if (window.location.pathname.includes("/buyer/profile")) {
+        const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
+          "/ai/fill-buyer-profile-form",
+          { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
+        );
+        if (Object.keys(fill.data.form || {}).length > 0) {
+          window.dispatchEvent(new CustomEvent("threadmark-ai-fill-buyer-profile-form", { detail: { action: "fill", data: fill.data.form } }));
+        }
+        add({ role: "assistant", content: fill.data.message });
+        return;
+      }
+
       if (/(?:fabric|material).*(?:for|used for)|(?:for).*(?:cushion|uniform|outdoor|curtain|upholstery|apparel)/i.test(trimmed)) {
         const match = await api<{ data: { matches: { name: string; composition: string; gsm: number | string; price: number | string }[] } }>(
           "/ai/use-case-match",
