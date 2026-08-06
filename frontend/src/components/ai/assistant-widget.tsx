@@ -67,6 +67,19 @@ export function AssistantWidget() {
       }
 
       // Use-case match
+      // Fill product form (conversational stateful form filler)
+      if (window.location.pathname.endsWith("/supplier/products/new") || window.location.pathname.includes("/edit")) {
+        const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
+          "/ai/fill-product-form",
+          { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
+        );
+        if (Object.keys(fill.data.form || {}).length > 0) {
+          window.dispatchEvent(new CustomEvent("threadmark-ai-fill-form", { detail: { action: "fill", data: fill.data.form } }));
+        }
+        add({ role: "assistant", content: fill.data.message });
+        return;
+      }
+
       if (/(?:fabric|material).*(?:for|used for)|(?:for).*(?:cushion|uniform|outdoor|curtain|upholstery|apparel)/i.test(trimmed)) {
         const match = await api<{ data: { matches: { name: string; composition: string; gsm: number | string; price: number | string }[] } }>(
           "/ai/use-case-match",
@@ -133,18 +146,7 @@ export function AssistantWidget() {
         return;
       }
 
-      // Fill product form (conversational stateful form filler)
-      if (window.location.pathname.endsWith("/supplier/products/new") || window.location.pathname.includes("/edit")) {
-        const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
-          "/ai/fill-product-form",
-          { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
-        );
-        if (Object.keys(fill.data.form || {}).length > 0) {
-          window.dispatchEvent(new CustomEvent("threadmark-ai-fill-form", { detail: { action: "fill", data: fill.data.form } }));
-        }
-        add({ role: "assistant", content: fill.data.message });
-        return;
-      }
+
 
       // Clear filters
       const clearMatch = /^(?:clear|remove|reset|delete)\b\s*(?:the\s+)?(all|everything|filters?|category|search|gsm|composition|weave|stock|certification|sustainability)?/i.exec(trimmed);
