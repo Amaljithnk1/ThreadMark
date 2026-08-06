@@ -242,7 +242,7 @@ export function ProductReviews({ productId, supplierId }: { productId: string, s
                   </div>
                 </div>
                 <time className="font-data text-xs text-walnut/50">
-                  {new Date(review.created_at).toLocaleDateString()}
+                  {new Date(review.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </time>
               </div>
               
@@ -262,7 +262,7 @@ export function ProductReviews({ productId, supplierId }: { productId: string, s
                     </span>
                     <div className="flex items-center gap-4">
                       <time className="font-data text-xs text-indigo-dye/50">
-                        {new Date(review.supplier_replied_at!).toLocaleDateString()}
+                        {new Date(review.supplier_replied_at!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </time>
                       {isSupplier && (
                         <button onClick={() => {

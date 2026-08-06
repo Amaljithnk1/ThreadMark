@@ -10,7 +10,7 @@ export function generatePurchaseOrder(order: any, role: 'buyer' | 'supplier' | '
   
   doc.setFontSize(10);
   doc.text(`Order Number: ${order.order_number || order.id?.substring(0, 8) || 'N/A'}`, 14, 32);
-  doc.text(`Date: ${new Date(order.created_at).toLocaleDateString()}`, 14, 38);
+  doc.text(`Date: ${new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`, 14, 38);
   doc.text(`Status: ${order.status.toUpperCase()}`, 14, 44);
 
   // Bill To (Buyer)
