@@ -80,7 +80,7 @@ export function AssistantWidget() {
         return;
       }
       
-      if (window.location.pathname.includes("/supplier/profile")) {
+      if (window.location.pathname.includes("/supplier/profile") || window.location.pathname.includes("/onboarding/supplier")) {
         const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
           "/ai/fill-profile-form",
           { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
@@ -92,7 +92,7 @@ export function AssistantWidget() {
         return;
       }
 
-      if (window.location.pathname.includes("/buyer/profile")) {
+      if (window.location.pathname.includes("/buyer/profile") || window.location.pathname.includes("/onboarding/buyer")) {
         const fill = await api<{ data: { form: Record<string, unknown>, message: string } }>(
           "/ai/fill-buyer-profile-form",
           { method: "POST", body: JSON.stringify({ messages: [...messages, { role: "user", content: trimmed }] }) }
