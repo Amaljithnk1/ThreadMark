@@ -9,6 +9,7 @@ export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   password: passwordSchema,
   role: z.enum(["buyer", "supplier"]),
+  username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/).optional(),
 });
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
