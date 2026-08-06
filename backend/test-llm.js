@@ -1,9 +1,25 @@
-import { converse } from "./src/lib/ai.ts";
-import { z } from "zod";
+const url = "https://api.openai.com/v1/chat/completions";
+const key = process.env.OPENAI_API_KEY;
+
+async function converse(messages) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages,
+      temperature: 0.2
+    })
+  });
+  return res.json();
+}
 
 async function main() {
   const instruction = `Extract product form fields from this supplier conversation. Return a JSON object with two keys: "form" (the explicitly mentioned valid fields) and "message" (your conversational reply).
-Allowed form keys: name (do NOT use "productName"), category, description, gsm, composition, weaveType, width, shrinkageRate (can include %), colorfastnessRating (can include /), colors, stockQty, stockType ("ready_stock" or "made_to_order"), leadTimeDays, price, certifications, sustainabilityTags, tiers (MUST be formatted as "minQty:price", e.g. "50:15").
+Allowed form keys: name, category, description, gsm, composition, weaveType, width, shrinkageRate (can include %), colorfastnessRating (can include /), colors, stockQty, stockType ("ready_stock" or "made_to_order"), leadTimeDays, price, certifications, sustainabilityTags, tiers (MUST be formatted as "minQty:price", e.g. "50:15").
 CRITICAL RULES:
 1. Do NOT invent or guess any values (e.g. do NOT output "Unknown").
 2. ALWAYS extract fields mentioned in the latest message, even if the user is updating or overwriting a value they previously provided (e.g. if they previously set price to 100, and now say "add price 200", you MUST output {"price": "200"}).
@@ -14,15 +30,14 @@ CRITICAL RULES:
 
   const userMessage = "Product name Hemp Canvas Duck Category Home textiles Description Heavyweight hemp canvas with a tight duck weave, naturally durable and low-impact to grow — ideal for bags, upholstery, and workwear. GSM 340 Composition 100% hemp Weave type Duck weave Width 140 Shrinkage rate 2% Colorfastness 4/5 Available colors natural, olive, charcoal Available stock 400 Stock type Ready stock Lead time days 10 Price per metre 265 Bulk tiers 80:245, 200:225 Certifications OEKO-TEX Sustainability tags organic";
 
-  const messages: any[] = [
+  const messages = [
     { role: "user", content: instruction },
     { role: "user", content: userMessage }
   ];
 
   console.log("Calling LLM...");
-  const result: any = await converse("You are a precise JSON extraction service.", messages);
-  const raw = result?.choices?.[0]?.message?.content ?? "{}";
-  console.log("RAW LLM OUTPUT:", raw);
+  const result = await converse(messages);
+  console.log("RESULT:\n", JSON.stringify(result, null, 2));
 }
 
 main().catch(console.error);

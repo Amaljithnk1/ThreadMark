@@ -80,7 +80,7 @@ export async function onboardingPrompt(req:Request,res:Response,next:NextFunctio
 const fillFormSchema=z.object({messages:z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(3000)})).min(1).max(12)});
 const commaString=z.union([z.string(),z.array(z.string()).transform(arr=>arr.join(", "))]).optional().catch(undefined);
 const numericString=z.union([z.string(),z.number()]).transform(String).refine(v=>!isNaN(Number(v))).optional().catch(undefined);
-const extractedFormSchema=z.object({name:z.string().optional().catch(undefined),productName:z.string().optional().catch(undefined),"Product name":z.string().optional().catch(undefined),"product name":z.string().optional().catch(undefined),category:z.string().optional().catch(undefined),description:z.string().optional().catch(undefined),gsm:numericString,composition:z.string().optional().catch(undefined),weaveType:z.string().optional().catch(undefined),width:numericString,shrinkageRate:z.string().optional().catch(undefined),colorfastnessRating:z.string().optional().catch(undefined),colors:commaString,stockQty:numericString,stockType:z.enum(["ready_stock","made_to_order"]).optional().catch(undefined),leadTimeDays:numericString,price:numericString,certifications:commaString,sustainabilityTags:commaString,tiers:z.string().regex(/^\s*\d+\s*:\s*\d+(?:\s*,\s*\d+\s*:\s*\d+)*\s*$/).optional().catch(undefined)}).strip();
+const extractedFormSchema=z.object({name:z.string().optional().catch(undefined),category:z.string().optional().catch(undefined),description:z.string().optional().catch(undefined),gsm:numericString,composition:z.string().optional().catch(undefined),weaveType:z.string().optional().catch(undefined),width:numericString,shrinkageRate:z.string().optional().catch(undefined),colorfastnessRating:z.string().optional().catch(undefined),colors:commaString,stockQty:numericString,stockType:z.enum(["ready_stock","made_to_order"]).optional().catch(undefined),leadTimeDays:numericString,price:numericString,certifications:commaString,sustainabilityTags:commaString,tiers:z.string().regex(/^\s*\d+\s*:\s*\d+(?:\s*,\s*\d+\s*:\s*\d+)*\s*$/).optional().catch(undefined)}).strip();
 export async function fillProductForm(req:Request,res:Response,next:NextFunction){try{const input=fillFormSchema.parse(req.body);const instruction=`Extract product form fields from this supplier conversation. Return a JSON object with two keys: "form" (the explicitly mentioned valid fields) and "message" (your conversational reply).
 Allowed form keys: name, category, description, gsm, composition, weaveType, width, shrinkageRate (can include %), colorfastnessRating (can include /), colors, stockQty, stockType ("ready_stock" or "made_to_order"), leadTimeDays, price, certifications, sustainabilityTags, tiers (MUST be formatted as "minQty:price", e.g. "50:15").
 CRITICAL RULES:
@@ -90,11 +90,14 @@ CRITICAL RULES:
 4. If the user provides incomplete or invalid data for a field (e.g. they say they want a bulk tier but don't provide BOTH the minimum quantity and the price, or provide a number for a text field), do NOT put it in "form". Instead, in your "message", explain the issue, provide a strict hint on the required format, and ask them to provide the missing part. Do NOT say you have "noted" or "added" a field if you are leaving it out of the "form" object!
 5. If they are answering a previous clarification (e.g. "yeah its colorfastness" or "quantity is 50"), use the conversation history to map their answer to the correct field in "form", and acknowledge it in "message".
 6. Always output exactly this format: {"form": {"key": "value"}, "message": "Your reply here."}`;const messages:{role:"user"|"assistant";content:string}[]=[{role:"user",content:instruction},...input.messages.map(m=>({role:m.role,content:m.content}))];const result:any=await converse("You are a precise JSON extraction service.",messages);const raw=result?.choices?.[0]?.message?.content??"{}";const matched=raw.match(/\{[\s\S]*\}/);let parsed:any={};try{parsed=JSON.parse(matched?.[0]??"{}");}catch{}
-const safeForm=extractedFormSchema.safeParse(parsed.form||{});
+const rawForm=parsed.form||{};
+const normalizedForm:any={};
+for(const [k,v] of Object.entries(rawForm)){
+  const normK=k.toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(normK==='productname'||normK==='name') normalizedForm.name=v;
+  else normalizedForm[k]=v;
+}
+const safeForm=extractedFormSchema.safeParse(normalizedForm);
 const validForm=safeForm.success?safeForm.data:{};
-if (validForm.productName && !validForm.name) validForm.name = validForm.productName;
-if (validForm["Product name"] && !validForm.name) validForm.name = validForm["Product name"];
-if (validForm["product name"] && !validForm.name) validForm.name = validForm["product name"];
-delete validForm.productName; delete validForm["Product name"]; delete validForm["product name"];
 const message=typeof parsed.message==='string'?parsed.message:Object.keys(validForm).length?"I've drafted the product form for you. Please review the details before saving!":"I couldn't identify any concrete product details to add.";
 res.json({data:{form:validForm,message}});}catch(error){next(error)}}
