@@ -9,6 +9,7 @@ type Kind = "buyer"|"supplier";
 export function OnboardingChat({kind}:{kind:Kind}) {
   const [notice,setNotice]=useState("");
   const [error,setError]=useState("");
+  const [fieldErrors,setFieldErrors]=useState<Record<string,string>>({});
   const [saving,setSaving]=useState(false);
   const [phoneValue,setPhoneValue]=useState("");
   const router=useRouter();
@@ -61,6 +62,7 @@ export function OnboardingChat({kind}:{kind:Kind}) {
     setSaving(true);
     setError("");
     setNotice("");
+    setFieldErrors({});
     const data=new FormData(e.currentTarget);
     const split=(key:string)=>String(data.get(key)??'').split(',').map(v=>v.trim()).filter(Boolean);
     try{
@@ -82,7 +84,16 @@ export function OnboardingChat({kind}:{kind:Kind}) {
         fabricTypesOffered:split('fabrics'),
         moq:data.get('moq')
       });
-      if(!payload.success) throw new Error(payload.error.issues[0]?.message??'Check your answers.');
+      if(!payload.success) {
+        const errors: Record<string, string> = {};
+        payload.error.issues.forEach(issue => {
+          if (issue.path[0]) {
+            errors[issue.path[0].toString()] = issue.message;
+          }
+        });
+        setFieldErrors(errors);
+        throw new Error('Please fix the highlighted fields.');
+      }
       await api(kind==='buyer'?'/profiles/buyer':'/profiles/supplier',{method:'PUT',body:JSON.stringify(payload.data)});
       router.push(kind==='buyer'?'/buyer':'/supplier');
     }catch(cause){
@@ -108,29 +119,30 @@ export function OnboardingChat({kind}:{kind:Kind}) {
         <form onSubmit={save} className="mt-8 grid gap-5 md:grid-cols-2">
           {kind === 'buyer' ? (
             <>
-              <label><span className="mb-1 block text-sm font-semibold">Business type</span><input name="businessType" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Boutique Retailer"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Industry</span><input name="industry" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Women's Fashion"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Product categories of interest</span><input name="categories" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Dresses, Blouses"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Preferred fabric types</span><input name="fabrics" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Cotton, Linen"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Typical order quantity</span><input name="quantity" placeholder="e.g. 100-500" required className="w-full border border-loom bg-[#f7f1e7] p-3"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Budget range</span><input name="budget" placeholder="e.g. 50-100" required className="w-full border border-loom bg-[#f7f1e7] p-3"/></label>
-              <label className="md:col-span-2"><span className="mb-1 block text-sm font-semibold">Additional preferences</span><textarea name="preferences" className="min-h-24 w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Eco-friendly dyes preferred"/></label>
+              <label><span className="mb-1 block text-sm font-semibold">Business type</span><input name="businessType" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Boutique Retailer"/>{fieldErrors.businessType && <span className="text-danger text-sm mt-1 block">{fieldErrors.businessType}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Industry</span><input name="industry" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Women's Fashion"/>{fieldErrors.industry && <span className="text-danger text-sm mt-1 block">{fieldErrors.industry}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Product categories of interest</span><input name="categories" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Dresses, Blouses"/>{fieldErrors.productCategoriesInterest && <span className="text-danger text-sm mt-1 block">{fieldErrors.productCategoriesInterest}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Preferred fabric types</span><input name="fabrics" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Cotton, Linen"/>{fieldErrors.preferredFabricTypes && <span className="text-danger text-sm mt-1 block">{fieldErrors.preferredFabricTypes}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Typical order quantity (in metres)</span><input name="quantity" placeholder="e.g. 100-500" required className={`w-full border p-3 ${fieldErrors.typicalOrderQuantity ? 'border-danger bg-danger/5' : 'border-loom bg-[#f7f1e7]'}`}/>{fieldErrors.typicalOrderQuantity && <span className="text-danger text-sm mt-1 block font-semibold">{fieldErrors.typicalOrderQuantity}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Budget range (in ₹ per metre)</span><input name="budget" placeholder="e.g. 50-100" required className={`w-full border p-3 ${fieldErrors.budgetRange ? 'border-danger bg-danger/5' : 'border-loom bg-[#f7f1e7]'}`}/>{fieldErrors.budgetRange && <span className="text-danger text-sm mt-1 block font-semibold">{fieldErrors.budgetRange}</span>}</label>
+              <label className="md:col-span-2"><span className="mb-1 block text-sm font-semibold">Additional preferences</span><textarea name="preferences" className="min-h-24 w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Eco-friendly dyes preferred"/>{fieldErrors.additionalPreferences && <span className="text-danger text-sm mt-1 block">{fieldErrors.additionalPreferences}</span>}</label>
             </>
           ) : (
             <>
-              <label className="md:col-span-2"><span className="mb-1 block text-sm font-semibold">Business Name</span><input name="businessName" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Global Textiles Inc."/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Business type</span><input name="businessType" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Fabric Mill"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Contact Email</span><input name="email" type="email" className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. contact@mill.com"/></label>
+              <label className="md:col-span-2"><span className="mb-1 block text-sm font-semibold">Business Name</span><input name="businessName" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Global Textiles Inc."/>{fieldErrors.businessName && <span className="text-danger text-sm mt-1 block">{fieldErrors.businessName}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Business type</span><input name="businessType" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Fabric Mill"/>{fieldErrors.businessType && <span className="text-danger text-sm mt-1 block">{fieldErrors.businessType}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Contact Email</span><input name="email" type="email" className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. contact@mill.com"/>{fieldErrors['contactInfo.email'] && <span className="text-danger text-sm mt-1 block">{fieldErrors['contactInfo.email']}</span>}</label>
               <label>
                 <span className="mb-1 block text-sm font-semibold">Contact Phone</span>
                 <input name="phone" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^0-9+]/g, ''))} className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 9876543210"/>
                 <span className="mt-1 block text-xs text-walnut/60">{phoneValue.replace(/[^0-9]/g, '').length} digits (minimum 10 required)</span>
+                {fieldErrors['contactInfo.phone'] && <span className="text-danger text-sm mt-1 block">{fieldErrors['contactInfo.phone']}</span>}
               </label>
-              <label><span className="mb-1 block text-sm font-semibold">Business Address</span><input name="businessAddress" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 124 Industrial Park, Mumbai"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Operating Hours</span><input name="operatingHours" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 9 AM - 6 PM"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Product categories offered</span><input name="categories" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Shirting, Upholstery"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Fabric types offered</span><input name="fabrics" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Cotton Poplin, Canvas"/></label>
-              <label><span className="mb-1 block text-sm font-semibold">Minimum Order Quantity (MOQ)</span><input name="moq" type="number" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 50"/></label>
+              <label><span className="mb-1 block text-sm font-semibold">Business Address</span><input name="businessAddress" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 124 Industrial Park, Mumbai"/>{fieldErrors.businessAddress && <span className="text-danger text-sm mt-1 block">{fieldErrors.businessAddress}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Operating Hours</span><input name="operatingHours" required className={`w-full border p-3 ${fieldErrors.operatingHours ? 'border-danger bg-danger/5' : 'border-loom bg-[#f7f1e7]'}`} placeholder="e.g. 9 AM - 6 PM"/>{fieldErrors.operatingHours && <span className="text-danger text-sm mt-1 block font-semibold">{fieldErrors.operatingHours}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Product categories offered</span><input name="categories" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Shirting, Upholstery"/>{fieldErrors.productCategories && <span className="text-danger text-sm mt-1 block">{fieldErrors.productCategories}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Fabric types offered</span><input name="fabrics" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. Cotton Poplin, Canvas"/>{fieldErrors.fabricTypesOffered && <span className="text-danger text-sm mt-1 block">{fieldErrors.fabricTypesOffered}</span>}</label>
+              <label><span className="mb-1 block text-sm font-semibold">Minimum Order Quantity (MOQ)</span><input name="moq" type="number" required className="w-full border border-loom bg-[#f7f1e7] p-3" placeholder="e.g. 50"/>{fieldErrors.moq && <span className="text-danger text-sm mt-1 block">{fieldErrors.moq}</span>}</label>
             </>
           )}
           <div className="md:col-span-2 mt-4">

@@ -6,5 +6,18 @@ import { AuthHydrator } from "@/components/auth-hydrator";
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"] });
 const plexSans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 const plexMono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500", "600"] });
+import { GoogleOAuthProvider } from "@react-oauth/google";
 export const metadata: Metadata = { title: "ThreadMark | B2B Textile Marketplace", description: "Source, compare, and order fabrics with confidence." };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en" className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}><body><AuthHydrator/>{children}<AssistantWidget/></body></html>; }
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { 
+  return (
+    <html lang="en" className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}>
+      <body>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+          <AuthHydrator/>
+          {children}
+          <AssistantWidget/>
+        </GoogleOAuthProvider>
+      </body>
+    </html>
+  ); 
+}
