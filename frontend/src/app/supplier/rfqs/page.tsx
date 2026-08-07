@@ -123,7 +123,7 @@ export default function SupplierRfqs(){
                   <div><dt className="text-walnut/70">Needed by</dt><dd className="mt-1 font-data">{rfq.needed_by_date??'Flexible'}</dd></div>
                 </dl>
                 
-                {rfq.status==='open' && (!rfq.quotes || rfq.quotes.length === 0) && quoteFor !== rfq.id && (
+                {(rfq.status==='open' || rfq.status==='quoted') && (!rfq.quotes || rfq.quotes.length === 0) && quoteFor !== rfq.id && (
                   <div className="mt-5 flex gap-3">
                     <button onClick={()=>setQuoteFor(rfq.id)} className="rounded-sm bg-indigo-dye px-4 py-2.5 font-semibold text-cotton">Send quote</button>
                     <button disabled={isPending(rfq.id)} onClick={()=>void run(rfq.id, ()=>reject(rfq.id))} className="rounded-sm border border-danger px-4 py-2.5 font-semibold text-danger disabled:opacity-50">Reject</button>
