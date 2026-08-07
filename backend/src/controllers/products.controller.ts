@@ -44,8 +44,8 @@ export async function listProducts(req: Request, res: Response, next: NextFuncti
     else conditions.push(`p.weave_type ILIKE ${bind(`%${params.weaveType}%`)}`);
   }
   if (params.stockType) conditions.push(`p.stock_type = ${bind(params.stockType)}`);
-  if (params.certification) conditions.push(`${bind(params.certification)} = ANY(p.certifications)`);
-  if (params.sustainabilityTag) conditions.push(`${bind(params.sustainabilityTag)} = ANY(p.sustainability_tags)`);
+  if (params.certification) conditions.push(`p.certifications::text ILIKE ${bind(`%${params.certification}%`)}`);
+  if (params.sustainabilityTag) conditions.push(`p.sustainability_tags::text ILIKE ${bind(`%${params.sustainabilityTag}%`)}`);
   const where = conditions.length ? ` AND ${conditions.join(" AND ")}` : "";
   const countResult = await query<{ count: string }>(`SELECT count(*) FROM products p JOIN supplier_profiles sp ON sp.user_id = p.supplier_id WHERE p.status = 'available' AND sp.status = 'approved'${where}`, values);
   values.push(params.limit, (params.page - 1) * params.limit);
